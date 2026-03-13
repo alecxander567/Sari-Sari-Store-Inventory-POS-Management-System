@@ -17,7 +17,7 @@ public class ProductDAO {
             " FROM products p" +
             " LEFT JOIN categories c ON p.category_id = c.category_id" +
             " LEFT JOIN supplier   s ON p.supplier_id = s.supplier_id" +
-            " WHERE p.created_by IN (SELECT user_id FROM users WHERE store_id = ?)" +
+            " WHERE p.store_id = ?" +
             " ORDER BY p.product_id";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -38,7 +38,7 @@ public class ProductDAO {
             " FROM products p" +
             " LEFT JOIN categories c ON p.category_id = c.category_id" +
             " LEFT JOIN supplier   s ON p.supplier_id = s.supplier_id" +
-            " WHERE p.created_by IN (SELECT user_id FROM users WHERE store_id = ?)" +
+            " WHERE p.store_id = ?" +
             "   AND (p.product_name LIKE ? OR c.category_name LIKE ? OR s.supplier_name LIKE ?)" +
             " ORDER BY p.product_id";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -51,18 +51,19 @@ public class ProductDAO {
         return list;
     }
 
-    public boolean addProduct(Product p, int createdByUserId) {
+    public boolean addProduct(Product p, int createdByUserId, int storeId) {
         String sql =
-            "INSERT INTO products (product_name, price, stock_quantity, created_by, category_id, supplier_id)" +
-            " VALUES (?, ?, ?, ?, ?, ?)";
+            "INSERT INTO products (product_name, price, stock_quantity, store_id, created_by, category_id, supplier_id)" +
+            " VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, p.getProductName());
             stmt.setBigDecimal(2, p.getPrice());
             stmt.setInt(3, p.getStockQuantity());
-            stmt.setInt(4, createdByUserId);
-            setNullableInt(stmt, 5, p.getCategoryId());
-            setNullableInt(stmt, 6, p.getSupplierId());
+            stmt.setInt(4, storeId);
+            stmt.setInt(5, createdByUserId);
+            setNullableInt(stmt, 6, p.getCategoryId());
+            setNullableInt(stmt, 7, p.getSupplierId());
             return stmt.executeUpdate() > 0;
         } catch (Exception e) { e.printStackTrace(); }
         return false;

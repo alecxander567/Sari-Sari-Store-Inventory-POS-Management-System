@@ -10,6 +10,7 @@ import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Disposeditemspanel extends JPanel {
@@ -31,6 +32,10 @@ public class Disposeditemspanel extends JPanel {
     private static final Color ROW_HOVER   = new Color(0xFB, 0xF0, 0xE8);
     private static final Color ROW_SEL     = new Color(0xF5, 0xE6, 0xDC);
     private static final Color RED         = new Color(0xC0, 0x39, 0x2B);
+    private static final Color GREEN_DARK  = new Color(0x27, 0x6B, 0x3A);
+    private static final Color GREEN_MID   = new Color(0x1E, 0x8A, 0x4A);
+    private static final Color GRAY_MED    = new Color(0x6B, 0x5E, 0x52);
+    private static final Color GRAY_LIGHT  = new Color(0x9A, 0x8E, 0x84);
 
     private static final Font FONT_TITLE   = new Font("SansSerif", Font.BOLD,  22);
     private static final Font FONT_SUB     = new Font("SansSerif", Font.PLAIN, 12);
@@ -45,8 +50,8 @@ public class Disposeditemspanel extends JPanel {
         "Price (₱)", "Reason", "Disposed On"
     };
 
-    private final User           loggedInUser;
-    private final Runnable       onBack;
+    private final User            loggedInUser;
+    private final Runnable        onBack;
     private final Disposeditemdao dao = new Disposeditemdao();
 
     private DefaultTableModel tableModel;
@@ -92,7 +97,8 @@ public class Disposeditemspanel extends JPanel {
         title.setFont(FONT_TITLE); title.setForeground(Color.WHITE);
         JLabel sub = new JLabel("View all products that have been disposed of");
         sub.setFont(FONT_SUB); sub.setForeground(new Color(255, 255, 255, 170));
-        titleStack.add(title); titleStack.add(sub);
+        titleStack.add(title);
+        titleStack.add(sub);
 
         left.add(btnBack);
         left.add(Box.createHorizontalStrut(6));
@@ -111,12 +117,13 @@ public class Disposeditemspanel extends JPanel {
     }
 
     private JPanel buildToolbar() {
-        JPanel t = new JPanel(new BorderLayout());
+        JPanel t = new JPanel(new BorderLayout(12, 0));
         t.setOpaque(false);
+        t.setPreferredSize(new Dimension(0, 46));
 
         JPanel searchWrap = new JPanel(new BorderLayout());
         searchWrap.setOpaque(false);
-        searchWrap.setPreferredSize(new Dimension(300, 38));
+        searchWrap.setPreferredSize(new Dimension(320, 38));
 
         searchField = new JTextField() {
             @Override protected void paintComponent(Graphics g) {
@@ -130,8 +137,10 @@ public class Disposeditemspanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        searchField.setFont(FONT_INPUT); searchField.setForeground(TEXT);
-        searchField.setOpaque(false); searchField.setBorder(new EmptyBorder(6, 10, 6, 10));
+        searchField.setFont(FONT_INPUT);
+        searchField.setForeground(TEXT);
+        searchField.setOpaque(false);
+        searchField.setBorder(new EmptyBorder(6, 10, 6, 10));
         searchField.setToolTipText("Search by product, category, supplier or reason...");
         searchField.addKeyListener(new KeyAdapter() {
             @Override public void keyReleased(KeyEvent e) { loadItems(); }
@@ -144,12 +153,14 @@ public class Disposeditemspanel extends JPanel {
         searchWrap.add(searchField, BorderLayout.CENTER);
         t.add(searchWrap, BorderLayout.WEST);
 
-        JPanel chips = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        chips.setOpaque(false);
+        JPanel chipPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        chipPanel.setOpaque(false);
         chipTotal = buildChip("Records: 0",   new Color(0xFD, 0xED, 0xEB), new Color(0x9B, 0x2C, 0x1F));
         chipQty   = buildChip("Total Qty: 0", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00));
-        chips.add(chipTotal); chips.add(chipQty);
-        t.add(chips, BorderLayout.EAST);
+        chipPanel.add(chipTotal);
+        chipPanel.add(chipQty);
+        t.add(chipPanel, BorderLayout.EAST);
+
         return t;
     }
 
@@ -160,12 +171,15 @@ public class Disposeditemspanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
         chip.setFont(new Font("SansSerif", Font.BOLD, 14));
-        chip.setForeground(fg); chip.setBorder(new EmptyBorder(6, 16, 6, 16));
-        chip.setOpaque(false); return chip;
+        chip.setForeground(fg);
+        chip.setBorder(new EmptyBorder(6, 16, 6, 16));
+        chip.setOpaque(false);
+        return chip;
     }
 
     private JPanel buildTableCard() {
@@ -183,19 +197,120 @@ public class Disposeditemspanel extends JPanel {
         };
         card.setOpaque(false);
 
-        JPanel cardHeader = new JPanel(new BorderLayout());
+        JPanel cardHeader = new JPanel(new BorderLayout(12, 0));
         cardHeader.setOpaque(false);
-        cardHeader.setBorder(new EmptyBorder(18, 22, 14, 22));
+        cardHeader.setBorder(new EmptyBorder(14, 22, 14, 22));
 
         JLabel cardTitle = new JLabel("Disposed Product Records");
         cardTitle.setFont(new Font("SansSerif", Font.BOLD, 15));
         cardTitle.setForeground(TEXT);
         cardHeader.add(cardTitle, BorderLayout.WEST);
 
-        JLabel infoLbl = new JLabel("Read-only log • Products are permanently removed after disposal");
-        infoLbl.setFont(new Font("SansSerif", Font.ITALIC, 11));
-        infoLbl.setForeground(MUTED);
-        cardHeader.add(infoLbl, BorderLayout.EAST);
+        JPanel cardBtnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        cardBtnPanel.setOpaque(false);
+
+        JButton btnSelectAll   = buildToolbarButton("☑ Select All",   GRAY_MED,   Color.WHITE);
+        JButton btnUnselectAll = buildToolbarButton("☐ Unselect All", GRAY_LIGHT, Color.WHITE);
+        JButton btnRestore     = buildToolbarButton("↩ Restore",      GREEN_DARK, Color.WHITE);
+        JButton btnRestoreAll  = buildToolbarButton("↩ Restore All",  GREEN_MID,  Color.WHITE);
+        JButton btnDelete      = buildToolbarButton("🗑 Delete",       RED,        Color.WHITE);
+        JButton btnDeleteAll   = buildToolbarButton("🗑 Delete All",   new Color(0x96, 0x1A, 0x10), Color.WHITE);
+
+        btnSelectAll.addActionListener(e -> {
+            table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+            table.selectAll();
+        });
+
+        btnUnselectAll.addActionListener(e -> {
+            table.clearSelection();
+            table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        });
+
+        btnRestore.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Please select a row to restore.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Restore selected item back to inventory?",
+                "Confirm Restore", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                int id = (int) tableModel.getValueAt(row, 0);
+                boolean ok = dao.restoreItem(id);
+                if (ok) {
+                    JOptionPane.showMessageDialog(this, "Item restored successfully.");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Restore failed. Please try again.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                loadItems();
+            }
+        });
+
+        btnRestoreAll.addActionListener(e -> {
+            int count = tableModel.getRowCount();
+            if (count == 0) {
+                JOptionPane.showMessageDialog(this, "No records to restore.", "Empty", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Restore ALL " + count + " disposed item(s) back to inventory?",
+                "Confirm Restore All", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                int successCount = 0;
+                List<Integer> ids = new ArrayList<>();
+                for (int i = 0; i < tableModel.getRowCount(); i++)
+                    ids.add((int) tableModel.getValueAt(i, 0));
+                for (int id : ids)
+                    if (dao.restoreItem(id)) successCount++;
+                loadItems();
+                JOptionPane.showMessageDialog(this,
+                    successCount + " of " + ids.size() + " item(s) restored successfully.");
+            }
+        });
+
+        btnDelete.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row == -1) {
+                JOptionPane.showMessageDialog(this,
+                    "Please select a row to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Permanently delete this disposed record? This cannot be undone.",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                int id = (int) tableModel.getValueAt(row, 0);
+                dao.deleteDisposedItem(id);
+                loadItems();
+            }
+        });
+
+        btnDeleteAll.addActionListener(e -> {
+            int count = tableModel.getRowCount();
+            if (count == 0) {
+                JOptionPane.showMessageDialog(this, "No records to delete.", "Empty", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(this,
+                "Permanently delete ALL " + count + " disposed record(s)? This cannot be undone.",
+                "Confirm Delete All", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                dao.deleteAllDisposedItems(loggedInUser.getStoreId());
+                loadItems();
+            }
+        });
+
+        cardBtnPanel.add(btnSelectAll);
+        cardBtnPanel.add(btnUnselectAll);
+        cardBtnPanel.add(btnRestore);
+        cardBtnPanel.add(btnRestoreAll);
+        cardBtnPanel.add(btnDelete);
+        cardBtnPanel.add(btnDeleteAll);
+
+        cardHeader.add(cardBtnPanel, BorderLayout.EAST);
         card.add(cardHeader, BorderLayout.NORTH);
 
         JPanel divider = new JPanel() {
@@ -206,7 +321,12 @@ public class Disposeditemspanel extends JPanel {
         };
         divider.setPreferredSize(new Dimension(0, 1));
         divider.setOpaque(false);
-        card.add(divider, BorderLayout.CENTER);
+
+        JPanel northSection = new JPanel(new BorderLayout());
+        northSection.setOpaque(false);
+        northSection.add(cardHeader, BorderLayout.NORTH);
+        northSection.add(divider, BorderLayout.SOUTH);
+        card.add(northSection, BorderLayout.NORTH);
 
         tableModel = new DefaultTableModel(COLUMNS, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -289,6 +409,19 @@ public class Disposeditemspanel extends JPanel {
         header.setReorderingAllowed(false);
         header.setBorder(null);
         header.setBackground(HDR_TOP);
+
+        JPanel cornerFill = new JPanel() {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setPaint(new GradientPaint(0, 0, HDR_TOP, 0, getHeight(), HDR_BOT));
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.setColor(GOLD);
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawLine(0, getHeight() - 2, getWidth(), getHeight() - 2);
+                g2.dispose();
+            }
+        };
+        cornerFill.setOpaque(false);
 
         table.getColumnModel().getColumn(0).setMinWidth(0);
         table.getColumnModel().getColumn(0).setMaxWidth(0);
@@ -427,8 +560,8 @@ public class Disposeditemspanel extends JPanel {
                     boolean sel, boolean foc, int row, int col) {
                 super.getTableCellRendererComponent(t, val, sel, foc, row, col);
                 setHorizontalAlignment(SwingConstants.CENTER);
-                setFont(new Font("SansSerif", Font.PLAIN, 12));
-                setForeground(new Color(0x9A, 0x8E, 0x84));
+                setFont(new Font("SansSerif", Font.PLAIN, 13));
+                setForeground(TEXT);
                 setBorder(new EmptyBorder(0, 8, 0, 8));
                 return this;
             }
@@ -436,10 +569,21 @@ public class Disposeditemspanel extends JPanel {
 
         JScrollPane scroll = new JScrollPane(table);
         scroll.setBorder(null);
+        scroll.setViewportBorder(null);
+        scroll.setOpaque(true);
         scroll.setBackground(CARD);
+        scroll.getViewport().setOpaque(true);
         scroll.getViewport().setBackground(CARD);
         scroll.getVerticalScrollBar().setUnitIncrement(16);
-        card.add(scroll, BorderLayout.CENTER);
+        scroll.setCorner(JScrollPane.UPPER_RIGHT_CORNER, cornerFill);
+
+        JPanel scrollWrapper = new JPanel(new BorderLayout());
+        scrollWrapper.setOpaque(true);
+        scrollWrapper.setBackground(CARD);
+        scrollWrapper.setBorder(new EmptyBorder(0, 0, 8, 0));
+        scrollWrapper.add(scroll, BorderLayout.CENTER);
+        card.add(scrollWrapper, BorderLayout.CENTER);
+
         return card;
     }
 
@@ -501,18 +645,22 @@ public class Disposeditemspanel extends JPanel {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setPaint(new GradientPaint(0, 0, LEFT_TOP, getWidth(), getHeight(), LEFT_BOT));
-                g2.fillRect(0, 0, getWidth(), getHeight()); g2.dispose();
+                g2.fillRect(0, 0, getWidth(), getHeight());
+                g2.dispose();
             }
         };
-        header.setOpaque(false); header.setBorder(new EmptyBorder(18, 24, 18, 24));
+        header.setOpaque(false);
+        header.setBorder(new EmptyBorder(18, 24, 18, 24));
         JLabel hTitle = new JLabel("🗑️ Disposal Details");
-        hTitle.setFont(new Font("SansSerif", Font.BOLD, 16)); hTitle.setForeground(Color.WHITE);
+        hTitle.setFont(new Font("SansSerif", Font.BOLD, 16));
+        hTitle.setForeground(Color.WHITE);
         header.add(hTitle, BorderLayout.WEST);
         root.add(header, BorderLayout.NORTH);
 
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
-        body.setBackground(CARD); body.setBorder(new EmptyBorder(20, 28, 20, 28));
+        body.setBackground(CARD);
+        body.setBorder(new EmptyBorder(20, 28, 20, 28));
 
         addDetailRow(body, "Product Name",  name);
         addDetailRow(body, "Category",      category);
@@ -524,7 +672,8 @@ public class Disposeditemspanel extends JPanel {
         root.add(body, BorderLayout.CENTER);
 
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        btnRow.setBackground(CARD); btnRow.setBorder(new EmptyBorder(8, 24, 16, 24));
+        btnRow.setBackground(CARD);
+        btnRow.setBorder(new EmptyBorder(8, 24, 16, 24));
         JButton btnClose = buildFilledButton("Close");
         btnClose.addActionListener(e -> dialog.dispose());
         btnRow.add(btnClose);
@@ -540,7 +689,8 @@ public class Disposeditemspanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(FONT_LABEL); lbl.setForeground(MUTED);
+        lbl.setFont(FONT_LABEL);
+        lbl.setForeground(MUTED);
         lbl.setPreferredSize(new Dimension(120, 24));
 
         JLabel val = new JLabel(value);
@@ -553,6 +703,32 @@ public class Disposeditemspanel extends JPanel {
         parent.add(Box.createVerticalStrut(10));
     }
 
+
+    private JButton buildToolbarButton(String text, Color bg, Color fg) {
+        JButton btn = new JButton(text) {
+            @Override protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color c = getModel().isPressed()  ? bg.darker().darker()
+                        : getModel().isRollover() ? bg.darker()
+                        : bg;
+                g2.setColor(c);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btn.setForeground(fg);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.setBorder(new EmptyBorder(7, 13, 7, 13));
+        return btn;
+    }
+
     private JButton buildIconButton(String text, Color bg, Color fg) {
         JButton btn = new JButton(text) {
             @Override protected void paintComponent(Graphics g) {
@@ -560,7 +736,8 @@ public class Disposeditemspanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getModel().isRollover() ? bg.brighter() : bg);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
         btn.setFont(FONT_BTN); btn.setForeground(fg);
@@ -579,7 +756,8 @@ public class Disposeditemspanel extends JPanel {
                 Color accent = new Color(0xC7, 0x4B, 0x1A);
                 g2.setColor(getModel().isRollover() ? new Color(0x8F, 0x31, 0x10) : accent);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
         btn.setFont(new Font("SansSerif", Font.BOLD, 13)); btn.setForeground(Color.WHITE);

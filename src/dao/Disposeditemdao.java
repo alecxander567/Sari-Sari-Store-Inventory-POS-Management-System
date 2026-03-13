@@ -49,7 +49,7 @@ public class Disposeditemdao {
 
     private Disposeditem mapRow(ResultSet rs) throws SQLException {
         Disposeditem d = new Disposeditem();
-        d.setDisposeId(rs.getInt("disposed_id"));       
+        d.setDisposeId(rs.getInt("disposed_id"));
         d.setProductId(rs.getInt("product_id"));
         d.setProductName(rs.getString("product_name"));
         d.setPrice(rs.getBigDecimal("price"));
@@ -62,33 +62,39 @@ public class Disposeditemdao {
     }
 
     /**
-     * Restores a disposed item back into the products table, then removes
-     * it from disposed_items. Both steps run in a single transaction.
+     * Restores a disposed item back into the products table (with store_id),
+     * then removes it from disposed_items. Both steps run in a single transaction.
      */
     public boolean restoreItem(int disposedId) {
         String selectSql =
-            "SELECT product_id, product_name, price, category_name, supplier_name," +
+            "SELECT product_name, price, category_name, supplier_name," +
             " quantity, store_id, created_by FROM disposed_items WHERE disposed_id = ?";
-        // Look up category_id and supplier_id by name (best-effort; null if not found)
+
         String catSql = "SELECT category_id FROM categories WHERE category_name = ? LIMIT 1";
         String supSql = "SELECT supplier_id FROM supplier  WHERE supplier_name  = ? LIMIT 1";
+
         String insertSql =
-            "INSERT INTO products (product_name, price, stock_quantity, created_by, category_id, supplier_id)" +
-            " VALUES (?, ?, ?, ?, ?, ?)";
+            "INSERT INTO products (product_name, price, stock_quantity, store_id, created_by, category_id, supplier_id)" +
+            " VALUES (?, ?, ?, ?, ?, ?, ?)";
+
         String deleteSql = "DELETE FROM disposed_items WHERE disposed_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
             try {
-                java.math.BigDecimal price; String productName; int quantity;
-                Integer createdBy; String categoryName; String supplierName;
+                java.math.BigDecimal price;
+                String productName, categoryName, supplierName;
+                int quantity, storeId;
+                Integer createdBy;
+
                 try (PreparedStatement sel = conn.prepareStatement(selectSql)) {
                     sel.setInt(1, disposedId);
                     ResultSet rs = sel.executeQuery();
-                    if (!rs.next()) return false;
+                    if (!rs.next()) { conn.rollback(); return false; }
                     productName  = rs.getString("product_name");
                     price        = rs.getBigDecimal("price");
                     quantity     = rs.getInt("quantity");
+                    storeId      = rs.getInt("store_id");
                     int cb       = rs.getInt("created_by");
                     createdBy    = rs.wasNull() ? null : cb;
                     categoryName = rs.getString("category_name");
@@ -96,7 +102,7 @@ public class Disposeditemdao {
                 }
 
                 Integer categoryId = null;
-                if (categoryName != null && !categoryName.equals("—")) {
+                if (categoryName != null && !categoryName.equals("—") && !categoryName.isBlank()) {
                     try (PreparedStatement cs = conn.prepareStatement(catSql)) {
                         cs.setString(1, categoryName);
                         ResultSet rs = cs.executeQuery();
@@ -105,7 +111,7 @@ public class Disposeditemdao {
                 }
 
                 Integer supplierId = null;
-                if (supplierName != null && !supplierName.equals("—")) {
+                if (supplierName != null && !supplierName.equals("—") && !supplierName.isBlank()) {
                     try (PreparedStatement ss = conn.prepareStatement(supSql)) {
                         ss.setString(1, supplierName);
                         ResultSet rs = ss.executeQuery();
@@ -117,12 +123,13 @@ public class Disposeditemdao {
                     ins.setString(1, productName);
                     ins.setBigDecimal(2, price);
                     ins.setInt(3, quantity);
-                    if (createdBy != null) ins.setInt(4, createdBy);
-                    else ins.setNull(4, java.sql.Types.INTEGER);
-                    if (categoryId != null) ins.setInt(5, categoryId);
-                    else ins.setNull(5, java.sql.Types.INTEGER);
-                    if (supplierId != null) ins.setInt(6, supplierId);
-                    else ins.setNull(6, java.sql.Types.INTEGER);
+                    ins.setInt(4, storeId);                         
+                    if (createdBy != null) ins.setInt(5, createdBy);
+                    else ins.setNull(5, Types.INTEGER);
+                    if (categoryId != null) ins.setInt(6, categoryId);
+                    else ins.setNull(6, Types.INTEGER);
+                    if (supplierId != null) ins.setInt(7, supplierId);
+                    else ins.setNull(7, Types.INTEGER);
                     ins.executeUpdate();
                 }
 
@@ -133,6 +140,7 @@ public class Disposeditemdao {
 
                 conn.commit();
                 return true;
+
             } catch (Exception ex) {
                 conn.rollback();
                 ex.printStackTrace();

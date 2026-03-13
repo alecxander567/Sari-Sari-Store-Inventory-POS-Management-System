@@ -43,6 +43,7 @@ public class DashboardFrame extends JFrame {
     private JPanel navSales;
 
     private String activeNav = "Dashboard";
+    private InventoryPanel inventoryPanel;
 
     public DashboardFrame(User user, String storeName) {
         this.loggedInUser = user;
@@ -84,9 +85,11 @@ public class DashboardFrame extends JFrame {
         sidebar.setOpaque(false);
         sidebar.setBorder(new EmptyBorder(28, 0, 28, 0));
 
-        JPanel logoArea = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        JPanel logoArea = new JPanel();
+        logoArea.setLayout(new BoxLayout(logoArea, BoxLayout.Y_AXIS));
         logoArea.setOpaque(false);
-        logoArea.setBorder(new EmptyBorder(0, 18, 0, 18));
+        logoArea.setBorder(new EmptyBorder(0, 14, 0, 14));
+        logoArea.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel icon = new JLabel("\uD83C\uDFEA") {
             @Override
@@ -98,29 +101,39 @@ public class DashboardFrame extends JFrame {
                 g2.dispose();
                 super.paintComponent(g);
             }
-            @Override public Dimension getPreferredSize() { return new Dimension(40, 40); }
-            @Override public Dimension getMinimumSize()   { return new Dimension(40, 40); }
-            @Override public Dimension getMaximumSize()   { return new Dimension(40, 40); }
+            @Override public Dimension getPreferredSize() { return new Dimension(72, 72); }
+            @Override public Dimension getMinimumSize()   { return new Dimension(72, 72); }
+            @Override public Dimension getMaximumSize()   { return new Dimension(72, 72); }
         };
         icon.setHorizontalAlignment(SwingConstants.CENTER);
         icon.setVerticalAlignment(SwingConstants.CENTER);
-        icon.setFont(new Font("SansSerif", Font.PLAIN, 20));
+        icon.setFont(new Font("SansSerif", Font.PLAIN, 38));
+        icon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel textStack = new JPanel();
-        textStack.setLayout(new BoxLayout(textStack, BoxLayout.Y_AXIS));
-        textStack.setOpaque(false);
         JLabel storeNameLabel = new JLabel("Sari-Sari Store");
-        storeNameLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        storeNameLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
         storeNameLabel.setForeground(Color.WHITE);
+        storeNameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        storeNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
         JLabel posLabel = new JLabel("Inventory & POS");
-        posLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        posLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
         posLabel.setForeground(new Color(255, 255, 255, 160));
-        textStack.add(storeNameLabel);
-        textStack.add(posLabel);
+        posLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        posLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         logoArea.add(icon);
-        logoArea.add(textStack);
-        sidebar.add(logoArea);
+        logoArea.add(Box.createVerticalStrut(10));
+        logoArea.add(storeNameLabel);
+        logoArea.add(Box.createVerticalStrut(3));
+        logoArea.add(posLabel);
+
+        JPanel logoWrapper = new JPanel(new BorderLayout());
+        logoWrapper.setOpaque(false);
+        logoWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
+        logoWrapper.add(logoArea, BorderLayout.CENTER);
+
+        sidebar.add(logoWrapper);
         sidebar.add(Box.createVerticalStrut(24));
 
         sidebar.add(buildSidebarDivider());
@@ -291,24 +304,57 @@ public class DashboardFrame extends JFrame {
         titleStack.add(greeting);
         topBar.add(titleStack, BorderLayout.WEST);
 
-        if (loggedInUser.getStoreId() != null) {
-            JLabel storeBadge = new JLabel("Store ID: " + loggedInUser.getStoreId()) {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(new Color(255, 255, 255, 30));
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                    g2.dispose();
-                    super.paintComponent(g);
-                }
-            };
-            storeBadge.setFont(new Font("SansSerif", Font.BOLD, 11));
-            storeBadge.setForeground(Color.WHITE);
-            storeBadge.setBorder(new EmptyBorder(5, 14, 5, 14));
-            storeBadge.setOpaque(false);
-            topBar.add(storeBadge, BorderLayout.EAST);
-        }
+        JButton btnProfile = new JButton() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                int w = getWidth();
+                int h = getHeight();
+
+                Color circleBg = getModel().isRollover()
+                    ? new Color(255, 255, 255, 60)
+                    : new Color(255, 255, 255, 30);
+                g2.setColor(circleBg);
+                g2.fillOval(0, 0, w, h);
+
+                g2.setColor(GOLD);
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(1, 1, w - 3, h - 3);
+
+                int headDiam = w / 3;
+                int headX    = (w - headDiam) / 2;
+                int headY    = h / 5;
+                g2.setColor(Color.WHITE);
+                g2.fillOval(headX, headY, headDiam, headDiam);
+
+                int bodyW = (int)(w * 0.58);
+                int bodyH = (int)(h * 0.36);
+                int bodyX = (w - bodyW) / 2;
+                int bodyY = h - bodyH - 3;
+
+                Shape oldClip = g2.getClip();
+                g2.setClip(0, h / 2, w, h);
+                g2.fillOval(bodyX, bodyY, bodyW, bodyH);
+                g2.setClip(oldClip);
+
+                g2.dispose();
+            }
+        };
+        btnProfile.setPreferredSize(new Dimension(44, 44));
+        btnProfile.setContentAreaFilled(false);
+        btnProfile.setBorderPainted(false);
+        btnProfile.setFocusPainted(false);
+        btnProfile.setOpaque(false);
+        btnProfile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnProfile.setToolTipText("Profile — " + loggedInUser.getFullName());
+        btnProfile.addActionListener(e -> { /* TODO: open profile panel */ });
+
+        JPanel profileWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        profileWrap.setOpaque(false);
+        profileWrap.add(btnProfile);
+        topBar.add(profileWrap, BorderLayout.EAST);
 
         main.add(topBar, BorderLayout.NORTH);
 
@@ -328,15 +374,6 @@ public class DashboardFrame extends JFrame {
         contentArea.setLayout(new BoxLayout(contentArea, BoxLayout.Y_AXIS));
         contentArea.setBackground(BG);
         contentArea.setBorder(new EmptyBorder(28, 28, 28, 28));
-
-        JPanel statsRow = new JPanel(new GridLayout(1, 3, 16, 0));
-        statsRow.setOpaque(false);
-        statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
-        statsRow.add(buildStatCard("P0.00", "Today's Sales",   "\uD83D\uDCB0", new Color(0xFA, 0xE8, 0xDF), ACCENT));
-        statsRow.add(buildStatCard("0",     "Transactions",    "\uD83D\uDCCB", new Color(0xE1, 0xF0, 0xE8), new Color(0x2E, 0x7D, 0x52)));
-        statsRow.add(buildStatCard("0",     "Low Stock Items", "\uD83D\uDCE6", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00)));
-        contentArea.add(statsRow);
-        contentArea.add(Box.createVerticalStrut(24));
 
         JPanel heroPanel = new JPanel() {
             @Override
@@ -363,16 +400,6 @@ public class DashboardFrame extends JFrame {
         heroPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
         heroPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel welcomeLabel = new JLabel("Welcome to " + storeName + "!");
-        welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 26));
-        welcomeLabel.setForeground(Color.WHITE);
-        welcomeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel heroSub = new JLabel("Your store is ready. Manage inventory, process sales, and track performance.");
-        heroSub.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        heroSub.setForeground(new Color(255, 255, 255, 170));
-        heroSub.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         JLabel heroBadge = new JLabel("  " + loggedInUser.getFullName() + "  ") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -390,6 +417,16 @@ public class DashboardFrame extends JFrame {
         heroBadge.setOpaque(false);
         heroBadge.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        JLabel welcomeLabel = new JLabel("Welcome to " + storeName + "!");
+        welcomeLabel.setFont(new Font("SansSerif", Font.BOLD, 26));
+        welcomeLabel.setForeground(Color.WHITE);
+        welcomeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel heroSub = new JLabel("Your store is ready. Manage inventory, process sales, and track performance.");
+        heroSub.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        heroSub.setForeground(new Color(255, 255, 255, 170));
+        heroSub.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         heroPanel.add(heroBadge);
         heroPanel.add(Box.createVerticalStrut(10));
         heroPanel.add(welcomeLabel);
@@ -401,6 +438,15 @@ public class DashboardFrame extends JFrame {
         heroWrapper.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
         heroWrapper.add(heroPanel, BorderLayout.CENTER);
         contentArea.add(heroWrapper);
+        contentArea.add(Box.createVerticalStrut(24));
+
+        JPanel statsRow = new JPanel(new GridLayout(1, 3, 16, 0));
+        statsRow.setOpaque(false);
+        statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
+        statsRow.add(buildStatCard("P0.00", "Today's Sales",   "\uD83D\uDCB0", new Color(0xFA, 0xE8, 0xDF), ACCENT));
+        statsRow.add(buildStatCard("0",     "Transactions",    "\uD83D\uDCCB", new Color(0xE1, 0xF0, 0xE8), new Color(0x2E, 0x7D, 0x52)));
+        statsRow.add(buildStatCard("0",     "Low Stock Items", "\uD83D\uDCE6", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00)));
+        contentArea.add(statsRow);
         contentArea.add(Box.createVerticalStrut(24));
 
         JLabel quickLabel = new JLabel("Quick Actions");
@@ -444,7 +490,7 @@ public class DashboardFrame extends JFrame {
     private JPanel buildInventoryContent() {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(BG);
-        InventoryPanel inventoryPanel = new InventoryPanel(
+        inventoryPanel = new InventoryPanel(
             loggedInUser,
             () -> navigateTo("Dashboard"),
             () -> navigateTo("DisposedItems")
@@ -458,7 +504,10 @@ public class DashboardFrame extends JFrame {
         wrapper.setBackground(BG);
         Disposeditemspanel disposedPanel = new Disposeditemspanel(
             loggedInUser,
-            () -> navigateTo("Inventory")
+            () -> {
+                if (inventoryPanel != null) inventoryPanel.refresh();
+                navigateTo("Inventory");
+            }
         );
         wrapper.add(disposedPanel, BorderLayout.CENTER);
         return wrapper;
