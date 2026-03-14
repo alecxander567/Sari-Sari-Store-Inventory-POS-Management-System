@@ -44,6 +44,7 @@ public class DashboardFrame extends JFrame {
 
     private String activeNav = "Dashboard";
     private InventoryPanel inventoryPanel;
+    private SuppliersPanel suppliersPanel;
 
     public DashboardFrame(User user, String storeName) {
         this.loggedInUser = user;
@@ -364,6 +365,7 @@ public class DashboardFrame extends JFrame {
 
         contentCardPanel.add(buildDashboardContent(), "Dashboard");
         contentCardPanel.add(buildInventoryContent(), "Inventory");
+        contentCardPanel.add(buildSuppliersContent(), "Suppliers");
 
         main.add(contentCardPanel, BorderLayout.CENTER);
         return main;
@@ -510,6 +512,21 @@ public class DashboardFrame extends JFrame {
             }
         );
         wrapper.add(disposedPanel, BorderLayout.CENTER);
+        return wrapper;
+    }
+    
+    private JPanel buildSuppliersContent() {
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(BG);
+
+        suppliersPanel = new SuppliersPanel(
+                loggedInUser,
+                () -> navigateTo("Dashboard")
+        );
+
+        wrapper.add(suppliersPanel, BorderLayout.CENTER);
+
         return wrapper;
     }
 
@@ -661,8 +678,15 @@ public class DashboardFrame extends JFrame {
     private void openPOS()            { JOptionPane.showMessageDialog(this, "POS Module will open here."); }
     private void openInventoryLogs()  { JOptionPane.showMessageDialog(this, "Inventory Logs will open here."); }
     private void openSalesHistory()   { JOptionPane.showMessageDialog(this, "Sales History / Analytics will open here."); }
-    private void openSuppliers()      { JOptionPane.showMessageDialog(this, "Suppliers Module will open here."); }
-    private void openCategories()     { JOptionPane.showMessageDialog(this, "Categories Module will open here."); }
+    private void openSuppliers() {
+        navigateTo("Suppliers");
+    }
+    private void openCategories() {
+        if (contentCardPanel.getComponentCount() < 6) {
+            contentCardPanel.add(new CategoryPanel(loggedInUser, () -> navigateTo("Dashboard")), "Categories");
+        }
+        navigateTo("Categories");
+    }
 
     private void logout() {
         dispose();

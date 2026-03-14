@@ -123,7 +123,7 @@ public class Disposeditemspanel extends JPanel {
 
         JPanel searchWrap = new JPanel(new BorderLayout());
         searchWrap.setOpaque(false);
-        searchWrap.setPreferredSize(new Dimension(320, 38));
+        searchWrap.setPreferredSize(new Dimension(320, 42));
 
         searchField = new JTextField() {
             @Override protected void paintComponent(Graphics g) {
@@ -131,7 +131,8 @@ public class Disposeditemspanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(INPUT_BG);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(BORDER_CLR);
+                g2.setColor(isFocusOwner() ? new Color(0xC7, 0x4B, 0x1A) : BORDER_CLR);
+                g2.setStroke(new BasicStroke(isFocusOwner() ? 1.5f : 1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
                 g2.dispose();
                 super.paintComponent(g);
@@ -140,14 +141,18 @@ public class Disposeditemspanel extends JPanel {
         searchField.setFont(FONT_INPUT);
         searchField.setForeground(TEXT);
         searchField.setOpaque(false);
-        searchField.setBorder(new EmptyBorder(6, 10, 6, 10));
+        searchField.setBorder(new EmptyBorder(8, 12, 8, 12));
         searchField.setToolTipText("Search by product, category, supplier or reason...");
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override public void focusGained(FocusEvent e) { searchField.repaint(); }
+            @Override public void focusLost(FocusEvent e)   { searchField.repaint(); }
+        });
         searchField.addKeyListener(new KeyAdapter() {
             @Override public void keyReleased(KeyEvent e) { loadItems(); }
         });
 
         JLabel ico = new JLabel("🔍");
-        ico.setFont(new Font("SansSerif", Font.PLAIN, 18));
+        ico.setFont(new Font("SansSerif", Font.PLAIN, 16));
         ico.setBorder(new EmptyBorder(0, 10, 0, 4));
         searchWrap.add(ico, BorderLayout.WEST);
         searchWrap.add(searchField, BorderLayout.CENTER);
@@ -175,7 +180,7 @@ public class Disposeditemspanel extends JPanel {
                 super.paintComponent(g);
             }
         };
-        chip.setFont(new Font("SansSerif", Font.BOLD, 14));
+        chip.setFont(new Font("SansSerif", Font.BOLD, 13));
         chip.setForeground(fg);
         chip.setBorder(new EmptyBorder(6, 16, 6, 16));
         chip.setOpaque(false);
@@ -431,6 +436,7 @@ public class Disposeditemspanel extends JPanel {
         for (int i = 0; i < widths.length; i++)
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
 
+        // Col 1 — Product Name (bold, TEXT)
         table.getColumnModel().getColumn(1).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -442,58 +448,32 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        table.getColumnModel().getColumn(2).setCellRenderer(new TableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(JTable t, Object val,
-                    boolean sel, boolean foc, int row, int col) {
-                String text = (val == null || val.toString().isEmpty()) ? "—" : val.toString();
-                boolean isDash = text.equals("—");
-                JPanel cell = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0)) {
-                    @Override protected void paintComponent(Graphics g) {
-                        boolean isSel = t.isRowSelected(row);
-                        boolean isHov = (row == hoveredRow) && !isSel;
-                        g.setColor(isSel ? ROW_SEL : isHov ? ROW_HOVER
-                                   : row % 2 == 0 ? ROW_EVEN : ROW_ODD);
-                        g.fillRect(0, 0, getWidth(), getHeight());
-                        super.paintComponent(g);
-                    }
-                };
-                cell.setOpaque(false);
-                JLabel lbl;
-                if (!isDash) {
-                    lbl = new JLabel(text) {
-                        @Override protected void paintComponent(Graphics g) {
-                            Graphics2D g2 = (Graphics2D) g.create();
-                            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                            g2.setColor(new Color(0xEE, 0xE8, 0xDE));
-                            g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
-                            g2.dispose();
-                            super.paintComponent(g);
-                        }
-                    };
-                    lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
-                    lbl.setForeground(MUTED);
-                    lbl.setBorder(new EmptyBorder(3, 9, 3, 9));
-                    lbl.setOpaque(false);
-                } else {
-                    lbl = new JLabel(text);
-                    lbl.setFont(FONT_TABLE);
-                    lbl.setForeground(new Color(0xC0, 0xB8, 0xB0));
-                }
-                cell.add(lbl);
-                return cell;
-            }
-        });
-
-        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+        // Col 2 — Category (plain text, matches date column style)
+        table.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
                 super.getTableCellRendererComponent(t, val, sel, foc, row, col);
-                setFont(FONT_TABLE); setForeground(MUTED);
+                setFont(FONT_TABLE);
+                setForeground(TEXT);
+                setHorizontalAlignment(SwingConstants.LEFT);
                 setBorder(new EmptyBorder(0, 14, 0, 14));
                 return this;
             }
         });
 
+        // Col 3 — Supplier (TEXT for readability, was MUTED)
+        table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(JTable t, Object val,
+                    boolean sel, boolean foc, int row, int col) {
+                super.getTableCellRendererComponent(t, val, sel, foc, row, col);
+                setFont(FONT_TABLE);
+                setForeground(TEXT);
+                setBorder(new EmptyBorder(0, 14, 0, 14));
+                return this;
+            }
+        });
+
+        // Col 4 — Qty Disposed badge
         table.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -528,6 +508,7 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
+        // Col 5 — Price (monospaced, TEXT)
         table.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -535,12 +516,13 @@ public class Disposeditemspanel extends JPanel {
                 setText(val != null ? "₱ " + val : "—");
                 setHorizontalAlignment(SwingConstants.CENTER);
                 setFont(FONT_MONO);
-                setForeground(new Color(0x6B, 0x5E, 0x52));
+                setForeground(new Color(0x1A, 0x52, 0x76));
                 setBorder(new EmptyBorder(0, 8, 0, 14));
                 return this;
             }
         });
 
+        // Col 6 — Reason (italic, TEXT for readability, was MUTED)
         table.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -548,13 +530,14 @@ public class Disposeditemspanel extends JPanel {
                 String reason = val == null ? "—" : val.toString();
                 setText(reason);
                 setToolTipText(reason);
-                setFont(new Font("SansSerif", Font.ITALIC, 12));
-                setForeground(MUTED);
+                setFont(new Font("SansSerif", Font.ITALIC, 13));
+                setForeground(TEXT);
                 setBorder(new EmptyBorder(0, 14, 0, 14));
                 return this;
             }
         });
 
+        // Col 7 — Disposed On (centered, TEXT)
         table.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -702,7 +685,6 @@ public class Disposeditemspanel extends JPanel {
         parent.add(row);
         parent.add(Box.createVerticalStrut(10));
     }
-
 
     private JButton buildToolbarButton(String text, Color bg, Color fg) {
         JButton btn = new JButton(text) {

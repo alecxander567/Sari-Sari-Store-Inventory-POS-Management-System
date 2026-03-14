@@ -82,7 +82,6 @@ public class InventoryPanel extends JPanel {
         loadProducts();
     }
 
-    /** Called by DashboardFrame after returning from Disposed Items to refresh the table. */
     public void refresh() {
         loadProducts();
     }
@@ -118,8 +117,7 @@ public class InventoryPanel extends JPanel {
         JButton btnAdd = buildIconButton("+ Add Product", GOLD, new Color(0x1A, 0x14, 0x10));
         btnAdd.addActionListener(e -> openProductDialog(null));
 
-        JButton btnDisposed = buildIconButton("🗑️ Disposed Items",
-                new Color(255, 255, 255, 30), Color.WHITE);
+        JButton btnDisposed = buildIconButton("🗑️ Disposed Items", new Color(255, 255, 255, 30), Color.WHITE);
         btnDisposed.addActionListener(e -> { if (onOpenDisposed != null) onOpenDisposed.run(); });
 
         JButton btnRefresh = buildIconButton("🔄 Refresh", new Color(255, 255, 255, 30), Color.WHITE);
@@ -417,44 +415,15 @@ public class InventoryPanel extends JPanel {
             }
         });
 
-        table.getColumnModel().getColumn(2).setCellRenderer(new TableCellRenderer() {
+        table.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
-                String text = val == null ? "—" : val.toString();
-                boolean isDash = text.equals("—");
-                JPanel cell = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0)) {
-                    @Override protected void paintComponent(Graphics g) {
-                        boolean isSelected = t.isRowSelected(row);
-                        boolean isHovered  = (row == hoveredRow) && !isSelected;
-                        g.setColor(isSelected ? ROW_SEL : isHovered ? ROW_HOVER
-                                   : row % 2 == 0 ? ROW_EVEN : ROW_ODD);
-                        g.fillRect(0, 0, getWidth(), getHeight());
-                        super.paintComponent(g);
-                    }
-                };
-                cell.setOpaque(false);
-                JLabel lbl = new JLabel(text);
-                if (!isDash) {
-                    lbl = new JLabel(text) {
-                        @Override protected void paintComponent(Graphics g) {
-                            Graphics2D g2 = (Graphics2D) g.create();
-                            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                            g2.setColor(new Color(0xEE, 0xE8, 0xDE));
-                            g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
-                            g2.dispose();
-                            super.paintComponent(g);
-                        }
-                    };
-                    lbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
-                    lbl.setForeground(MUTED);
-                    lbl.setBorder(new EmptyBorder(3, 9, 3, 9));
-                    lbl.setOpaque(false);
-                } else {
-                    lbl.setFont(FONT_TABLE);
-                    lbl.setForeground(new Color(0xC0, 0xB8, 0xB0));
-                }
-                cell.add(lbl);
-                return cell;
+                super.getTableCellRendererComponent(t, val, sel, foc, row, col);
+                setFont(FONT_TABLE);
+                setForeground(TEXT);
+                setHorizontalAlignment(SwingConstants.LEFT);
+                setBorder(new EmptyBorder(0, 14, 0, 14));
+                return this;
             }
         });
 
@@ -512,7 +481,8 @@ public class InventoryPanel extends JPanel {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
                 super.getTableCellRendererComponent(t, val, sel, foc, row, col);
-                setFont(FONT_TABLE); setForeground(MUTED);
+                setFont(FONT_TABLE);
+                setForeground(TEXT);
                 setBorder(new EmptyBorder(0, 14, 0, 14));
                 return this;
             }
@@ -604,11 +574,6 @@ public class InventoryPanel extends JPanel {
         }
     }
 
-    private void loadProducts(String keyword) {
-        if (loggedInUser.getStoreId() == null) return;
-        populateTable(dao.searchProducts(keyword, loggedInUser.getStoreId()));
-    }
-
     private void applyFilters() {
         if (loggedInUser.getStoreId() == null) return;
         String keyword = searchField.getText().trim();
@@ -695,12 +660,9 @@ public class InventoryPanel extends JPanel {
         form.setLayout(new BoxLayout(form, BoxLayout.Y_AXIS));
         form.setBackground(CARD); form.setBorder(new EmptyBorder(20, 28, 10, 28));
 
-        JTextField fldName  = buildField(form, "Product Name *",
-                isEdit ? existing.getProductName() : "");
-        JTextField fldStock = buildField(form, "Stock Quantity *",
-                isEdit ? String.valueOf(existing.getStockQuantity()) : "");
-        JTextField fldPrice = buildField(form, "Price (₱) *",
-                isEdit ? existing.getPrice().toPlainString() : "");
+        JTextField fldName  = buildField(form, "Product Name *", isEdit ? existing.getProductName() : "");
+        JTextField fldStock = buildField(form, "Stock Quantity *", isEdit ? String.valueOf(existing.getStockQuantity()) : "");
+        JTextField fldPrice = buildField(form, "Price (₱) *", isEdit ? existing.getPrice().toPlainString() : "");
 
         form.add(makeLabel("Category"));
         form.add(Box.createVerticalStrut(5));
@@ -786,8 +748,7 @@ public class InventoryPanel extends JPanel {
         int row = table.getSelectedRow();
         if (row == -1) {
             JOptionPane.showMessageDialog(this, "Please select a product to dispose.",
-                "No Selection", JOptionPane.INFORMATION_MESSAGE);
-            return;
+                "No Selection", JOptionPane.INFORMATION_MESSAGE); return;
         }
 
         int    productId = (int) tableModel.getValueAt(row, 0);
@@ -797,8 +758,7 @@ public class InventoryPanel extends JPanel {
         String price     = tableModel.getValueAt(row, 4).toString();
 
         Window parentWindow = SwingUtilities.getWindowAncestor(this);
-        JDialog dialog = new JDialog(parentWindow, "Confirm Disposal",
-                Dialog.ModalityType.APPLICATION_MODAL);
+        JDialog dialog = new JDialog(parentWindow, "Confirm Disposal", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setSize(520, 430);
         dialog.setLocationRelativeTo(this);
         dialog.setResizable(false);
@@ -812,8 +772,7 @@ public class InventoryPanel extends JPanel {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setPaint(new GradientPaint(0, 0, LEFT_TOP, getWidth(), getHeight(), LEFT_BOT));
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                g2.dispose();
+                g2.fillRect(0, 0, getWidth(), getHeight()); g2.dispose();
             }
         };
         dlgHeader.setOpaque(false);
@@ -827,16 +786,12 @@ public class InventoryPanel extends JPanel {
         hStack.setLayout(new BoxLayout(hStack, BoxLayout.Y_AXIS));
         hStack.setOpaque(false);
         JLabel hTitle = new JLabel("Dispose Product");
-        hTitle.setFont(new Font("SansSerif", Font.BOLD, 18));
-        hTitle.setForeground(Color.WHITE);
+        hTitle.setFont(new Font("SansSerif", Font.BOLD, 18)); hTitle.setForeground(Color.WHITE);
         JLabel hSub = new JLabel("This will remove the item from inventory permanently");
         hSub.setFont(new Font("SansSerif", Font.PLAIN, 12));
         hSub.setForeground(new Color(255, 255, 255, 170));
-        hStack.add(hTitle);
-        hStack.add(Box.createVerticalStrut(3));
-        hStack.add(hSub);
-        hLeft.add(hIcon);
-        hLeft.add(hStack);
+        hStack.add(hTitle); hStack.add(Box.createVerticalStrut(3)); hStack.add(hSub);
+        hLeft.add(hIcon); hLeft.add(hStack);
         dlgHeader.add(hLeft, BorderLayout.WEST);
         root.add(dlgHeader, BorderLayout.NORTH);
 
@@ -854,8 +809,7 @@ public class InventoryPanel extends JPanel {
                 g2.setColor(new Color(0xF0, 0xE4, 0xD8));
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose();
-                super.paintComponent(g);
+                g2.dispose(); super.paintComponent(g);
             }
         };
         infoCard.setOpaque(false);
@@ -878,8 +832,7 @@ public class InventoryPanel extends JPanel {
                 g2.setColor(new Color(0xF0, 0xD8, 0x90));
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
-                g2.dispose();
-                super.paintComponent(g);
+                g2.dispose(); super.paintComponent(g);
             }
         };
         warnBanner.setOpaque(false);
@@ -890,8 +843,7 @@ public class InventoryPanel extends JPanel {
         JLabel wText = new JLabel("Product will be logged as disposed and removed from inventory.");
         wText.setFont(new Font("SansSerif", Font.PLAIN, 12));
         wText.setForeground(new Color(0x92, 0x58, 0x00));
-        warnBanner.add(wIcon);
-        warnBanner.add(wText);
+        warnBanner.add(wIcon); warnBanner.add(wText);
         body.add(warnBanner);
         body.add(Box.createVerticalStrut(18));
 
@@ -902,7 +854,6 @@ public class InventoryPanel extends JPanel {
         body.add(reasonLbl);
         body.add(Box.createVerticalStrut(7));
 
-        JTextField[] reasonHolder = new JTextField[1];
         JTextField reasonField = new JTextField() {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -912,11 +863,9 @@ public class InventoryPanel extends JPanel {
                 g2.setColor(isFocusOwner() ? ACCENT : BORDER_CLR);
                 g2.setStroke(new BasicStroke(isFocusOwner() ? 1.5f : 1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
-                g2.dispose();
-                super.paintComponent(g);
+                g2.dispose(); super.paintComponent(g);
             }
         };
-        reasonHolder[0] = reasonField;
         reasonField.setFont(FONT_INPUT);
         reasonField.setForeground(TEXT);
         reasonField.setOpaque(false);
@@ -928,7 +877,6 @@ public class InventoryPanel extends JPanel {
             @Override public void focusLost(FocusEvent e)   { reasonField.repaint(); }
         });
         body.add(reasonField);
-
         root.add(body, BorderLayout.CENTER);
 
         JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
@@ -936,15 +884,13 @@ public class InventoryPanel extends JPanel {
         footer.setBorder(new EmptyBorder(8, 26, 20, 26));
 
         JButton btnCancel = buildSmallButton("Cancel", new Color(0xF0, 0xEB, 0xE4), MUTED);
-
         JButton btnConfirm = new JButton("🗑️  Dispose Product") {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getModel().isRollover() ? new Color(0x96, 0x1A, 0x10) : RED);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose();
-                super.paintComponent(g);
+                g2.dispose(); super.paintComponent(g);
             }
         };
         btnConfirm.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -957,7 +903,6 @@ public class InventoryPanel extends JPanel {
         btnConfirm.setBorder(new EmptyBorder(9, 22, 9, 22));
 
         final boolean[] confirmed = {false};
-
         btnCancel.addActionListener(e -> dialog.dispose());
         btnConfirm.addActionListener(e -> {
             if (reasonField.getText().trim().isEmpty()) {
@@ -971,8 +916,7 @@ public class InventoryPanel extends JPanel {
             dialog.dispose();
         });
 
-        footer.add(btnCancel);
-        footer.add(btnConfirm);
+        footer.add(btnCancel); footer.add(btnConfirm);
         root.add(footer, BorderLayout.SOUTH);
 
         SwingUtilities.invokeLater(reasonField::requestFocusInWindow);
@@ -983,8 +927,7 @@ public class InventoryPanel extends JPanel {
         String reason = reasonField.getText().trim();
         if (loggedInUser.getStoreId() == null) return;
         List<Product> all = dao.getAllProducts(loggedInUser.getStoreId());
-        Product target = all.stream()
-                .filter(p -> p.getProductId() == productId).findFirst().orElse(null);
+        Product target = all.stream().filter(p -> p.getProductId() == productId).findFirst().orElse(null);
         if (target == null) { showToast("❌  Product not found.", false); return; }
 
         boolean ok = dao.disposeProduct(target, reason, loggedInUser.getStoreId());
@@ -1006,9 +949,7 @@ public class InventoryPanel extends JPanel {
         JLabel val = new JLabel(value);
         val.setFont(new Font("SansSerif", Font.BOLD, 13));
         val.setForeground(TEXT);
-        cell.add(lbl);
-        cell.add(Box.createVerticalStrut(3));
-        cell.add(val);
+        cell.add(lbl); cell.add(Box.createVerticalStrut(3)); cell.add(val);
         return cell;
     }
 
@@ -1113,8 +1054,7 @@ public class InventoryPanel extends JPanel {
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
                 g2.setColor(new Color(255, 255, 255, 60));
                 g2.fillRoundRect(0, 0, 4, getHeight(), 4, 4);
-                g2.dispose();
-                super.paintComponent(g);
+                g2.dispose(); super.paintComponent(g);
             }
         };
         panel.setOpaque(false);
