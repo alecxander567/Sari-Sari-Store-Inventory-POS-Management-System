@@ -116,45 +116,58 @@ public class Disposeditemspanel extends JPanel {
         return c;
     }
 
+    private static final String SEARCH_PLACEHOLDER = "Search disposed items...";
+
     private JPanel buildToolbar() {
         JPanel t = new JPanel(new BorderLayout(12, 0));
         t.setOpaque(false);
         t.setPreferredSize(new Dimension(0, 46));
 
-        JPanel searchWrap = new JPanel(new BorderLayout());
-        searchWrap.setOpaque(false);
-        searchWrap.setPreferredSize(new Dimension(320, 42));
-
-        searchField = new JTextField() {
+        JPanel searchWrap = new JPanel(new BorderLayout()) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(INPUT_BG);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(isFocusOwner() ? new Color(0xC7, 0x4B, 0x1A) : BORDER_CLR);
-                g2.setStroke(new BasicStroke(isFocusOwner() ? 1.5f : 1f));
+                g2.setColor(BORDER_CLR);
+                g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
                 g2.dispose();
-                super.paintComponent(g);
             }
         };
+        searchWrap.setOpaque(false);
+        searchWrap.setPreferredSize(new Dimension(320, 38));
+
+        JLabel searchIco = new JLabel("  🔍");
+        searchIco.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        searchIco.setBorder(new EmptyBorder(0, 8, 0, 2));
+
+        searchField = new JTextField();
         searchField.setFont(FONT_INPUT);
-        searchField.setForeground(TEXT);
+        searchField.setForeground(MUTED);
+        searchField.setText(SEARCH_PLACEHOLDER);
         searchField.setOpaque(false);
-        searchField.setBorder(new EmptyBorder(8, 12, 8, 12));
+        searchField.setBorder(new EmptyBorder(6, 4, 6, 10));
         searchField.setToolTipText("Search by product, category, supplier or reason...");
         searchField.addFocusListener(new FocusAdapter() {
-            @Override public void focusGained(FocusEvent e) { searchField.repaint(); }
-            @Override public void focusLost(FocusEvent e)   { searchField.repaint(); }
+            @Override public void focusGained(FocusEvent e) {
+                if (searchField.getText().equals(SEARCH_PLACEHOLDER)) {
+                    searchField.setText("");
+                    searchField.setForeground(TEXT);
+                }
+            }
+            @Override public void focusLost(FocusEvent e) {
+                if (searchField.getText().trim().isEmpty()) {
+                    searchField.setForeground(MUTED);
+                    searchField.setText(SEARCH_PLACEHOLDER);
+                }
+            }
         });
         searchField.addKeyListener(new KeyAdapter() {
             @Override public void keyReleased(KeyEvent e) { loadItems(); }
         });
 
-        JLabel ico = new JLabel("🔍");
-        ico.setFont(new Font("SansSerif", Font.PLAIN, 16));
-        ico.setBorder(new EmptyBorder(0, 10, 0, 4));
-        searchWrap.add(ico, BorderLayout.WEST);
+        searchWrap.add(searchIco,   BorderLayout.WEST);
         searchWrap.add(searchField, BorderLayout.CENTER);
         t.add(searchWrap, BorderLayout.WEST);
 
@@ -572,7 +585,8 @@ public class Disposeditemspanel extends JPanel {
 
     private void loadItems() {
         if (loggedInUser.getStoreId() == null) return;
-        String keyword = searchField != null ? searchField.getText().trim() : "";
+        String raw     = searchField != null ? searchField.getText() : "";
+        String keyword = raw.equals(SEARCH_PLACEHOLDER) ? "" : raw.trim();
         List<Disposeditem> items = keyword.isEmpty()
             ? dao.getAllDisposedItems(loggedInUser.getStoreId())
             : dao.searchDisposedItems(keyword, loggedInUser.getStoreId());

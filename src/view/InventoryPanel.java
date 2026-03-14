@@ -54,6 +54,8 @@ public class InventoryPanel extends JPanel {
     private static final Font FONT_MONO    = new Font("Monospaced", Font.BOLD, 13);
     private static final Font FONT_DATE    = new Font("SansSerif", Font.PLAIN, 13);
 
+    private static final String SEARCH_PLACEHOLDER = "Search products...";
+
     private static final String[] COLUMNS = {
         "ID", "Product Name", "Category", "Stock", "Price (₱)", "Supplier", "Added On", "Status"
     };
@@ -148,31 +150,52 @@ public class InventoryPanel extends JPanel {
         JPanel t = new JPanel(new BorderLayout());
         t.setOpaque(false);
 
-        JPanel searchWrap = new JPanel(new BorderLayout());
-        searchWrap.setOpaque(false);
-        searchWrap.setPreferredSize(new Dimension(300, 38));
-        searchField = new JTextField() {
+        // ── Search bar — matches SuppliersPanel style ─────────────────────
+        JPanel searchWrap = new JPanel(new BorderLayout()) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(INPUT_BG);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
                 g2.setColor(BORDER_CLR);
+                g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
                 g2.dispose();
-                super.paintComponent(g);
             }
         };
-        searchField.setFont(FONT_INPUT); searchField.setForeground(TEXT);
-        searchField.setOpaque(false); searchField.setBorder(new EmptyBorder(6, 10, 6, 10));
+        searchWrap.setOpaque(false);
+        searchWrap.setPreferredSize(new Dimension(300, 38));
+
+        JLabel searchIco = new JLabel("  🔍");
+        searchIco.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        searchIco.setBorder(new EmptyBorder(0, 8, 0, 2));
+
+        searchField = new JTextField();
+        searchField.setFont(FONT_INPUT);
+        searchField.setForeground(MUTED);
+        searchField.setText(SEARCH_PLACEHOLDER);
+        searchField.setOpaque(false);
+        searchField.setBorder(new EmptyBorder(6, 4, 6, 10));
         searchField.setToolTipText("Search by name, category or supplier...");
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override public void focusGained(FocusEvent e) {
+                if (searchField.getText().equals(SEARCH_PLACEHOLDER)) {
+                    searchField.setText("");
+                    searchField.setForeground(TEXT);
+                }
+            }
+            @Override public void focusLost(FocusEvent e) {
+                if (searchField.getText().trim().isEmpty()) {
+                    searchField.setForeground(MUTED);
+                    searchField.setText(SEARCH_PLACEHOLDER);
+                }
+            }
+        });
         searchField.addKeyListener(new KeyAdapter() {
             @Override public void keyReleased(KeyEvent e) { applyFilters(); }
         });
-        JLabel ico = new JLabel("🔍");
-        ico.setFont(new Font("SansSerif", Font.PLAIN, 18));
-        ico.setBorder(new EmptyBorder(0, 10, 0, 4));
-        searchWrap.add(ico, BorderLayout.WEST);
+
+        searchWrap.add(searchIco,   BorderLayout.WEST);
         searchWrap.add(searchField, BorderLayout.CENTER);
         t.add(searchWrap, BorderLayout.WEST);
 
@@ -576,7 +599,8 @@ public class InventoryPanel extends JPanel {
 
     private void applyFilters() {
         if (loggedInUser.getStoreId() == null) return;
-        String keyword = searchField.getText().trim();
+        String raw     = searchField.getText();
+        String keyword = raw.equals(SEARCH_PLACEHOLDER) ? "" : raw.trim();
         String cat     = cbCategoryFilter != null ? (String) cbCategoryFilter.getSelectedItem() : "All Categories";
         String sort    = cbSort           != null ? (String) cbSort.getSelectedItem()           : "Name A → Z";
 
