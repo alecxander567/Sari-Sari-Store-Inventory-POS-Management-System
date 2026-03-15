@@ -1,11 +1,13 @@
 package view;
 
 import model.User;
+import config.DatabaseConnection;
 
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.*;
 
 public class DashboardFrame extends JFrame {
 
@@ -46,6 +48,13 @@ public class DashboardFrame extends JFrame {
     private InventoryPanel inventoryPanel;
     private SuppliersPanel suppliersPanel;
 
+    private boolean posAdded = false;
+
+    private JLabel lblTodaySales;
+    private JLabel lblTransactions;
+    private JLabel lblLowStock;
+    private JLabel lblOutOfStock; 
+
     public DashboardFrame(User user, String storeName) {
         this.loggedInUser = user;
         this.storeName = (storeName != null && !storeName.isEmpty()) ? storeName : "Your Store";
@@ -64,7 +73,56 @@ public class DashboardFrame extends JFrame {
         root.add(buildSidebar(),  BorderLayout.WEST);
         root.add(buildMainArea(), BorderLayout.CENTER);
 
+        refreshDashboardStats();
         setVisible(true);
+    }
+
+    private void refreshDashboardStats() {
+        SwingUtilities.invokeLater(() -> {
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+
+                PreparedStatement salesStmt = conn.prepareStatement(
+                    "SELECT COALESCE(SUM(total_amount), 0) AS total " +
+                    "FROM sales WHERE DATE(created_at) = CURDATE()");
+                ResultSet rs1 = salesStmt.executeQuery();
+                double todayTotal = 0;
+                if (rs1.next()) todayTotal = rs1.getDouble("total");
+
+                PreparedStatement txStmt = conn.prepareStatement(
+                    "SELECT COUNT(*) AS cnt FROM sales WHERE DATE(created_at) = CURDATE()");
+                ResultSet rs2 = txStmt.executeQuery();
+                int txCount = 0;
+                if (rs2.next()) txCount = rs2.getInt("cnt");
+
+                PreparedStatement lowStmt = conn.prepareStatement(
+                    "SELECT COUNT(*) AS cnt FROM products WHERE stock_quantity > 0 AND stock_quantity <= 5");
+                ResultSet rs3 = lowStmt.executeQuery();
+                int lowCount = 0;
+                if (rs3.next()) lowCount = rs3.getInt("cnt");
+
+                PreparedStatement outStmt = conn.prepareStatement(
+                    "SELECT COUNT(*) AS cnt FROM products WHERE stock_quantity = 0");
+                ResultSet rs4 = outStmt.executeQuery();
+                int outCount = 0;
+                if (rs4.next()) outCount = rs4.getInt("cnt");
+
+                final String salesText = String.format("₱ %,.2f", todayTotal);
+                final String txText    = String.valueOf(txCount);
+                final String lowText   = String.valueOf(lowCount);
+                final String outText   = String.valueOf(outCount);
+
+                SwingUtilities.invokeLater(() -> {
+                    if (lblTodaySales   != null) lblTodaySales.setText(salesText);
+                    if (lblTransactions != null) lblTransactions.setText(txText);
+                    if (lblLowStock     != null) lblLowStock.setText(lowText);
+                    if (lblOutOfStock   != null) lblOutOfStock.setText(outText);
+                });
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
     }
 
     private JPanel buildSidebar() {
@@ -136,7 +194,6 @@ public class DashboardFrame extends JFrame {
 
         sidebar.add(logoWrapper);
         sidebar.add(Box.createVerticalStrut(24));
-
         sidebar.add(buildSidebarDivider());
         sidebar.add(Box.createVerticalStrut(16));
 
@@ -230,7 +287,10 @@ public class DashboardFrame extends JFrame {
             @Override public void mouseExited(MouseEvent e)  { hovered[0] = false; item.repaint(); }
             @Override public void mouseClicked(MouseEvent e) {
                 switch (label) {
-                    case "Dashboard":      navigateTo("Dashboard");   break;
+                    case "Dashboard":
+                        navigateTo("Dashboard");
+                        refreshDashboardStats();
+                        break;
                     case "Inventory":      navigateTo("Inventory");   break;
                     case "POS / Sales":    openPOS();                 break;
                     case "Inventory Logs": openInventoryLogs();       break;
@@ -310,44 +370,26 @@ public class DashboardFrame extends JFrame {
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                int w = getWidth();
-                int h = getHeight();
-
+                int w = getWidth(), h = getHeight();
                 Color circleBg = getModel().isRollover()
-                    ? new Color(255, 255, 255, 60)
-                    : new Color(255, 255, 255, 30);
-                g2.setColor(circleBg);
-                g2.fillOval(0, 0, w, h);
-
-                g2.setColor(GOLD);
-                g2.setStroke(new BasicStroke(1.5f));
+                    ? new Color(255, 255, 255, 60) : new Color(255, 255, 255, 30);
+                g2.setColor(circleBg); g2.fillOval(0, 0, w, h);
+                g2.setColor(GOLD); g2.setStroke(new BasicStroke(1.5f));
                 g2.drawOval(1, 1, w - 3, h - 3);
-
-                int headDiam = w / 3;
-                int headX    = (w - headDiam) / 2;
-                int headY    = h / 5;
-                g2.setColor(Color.WHITE);
-                g2.fillOval(headX, headY, headDiam, headDiam);
-
-                int bodyW = (int)(w * 0.58);
-                int bodyH = (int)(h * 0.36);
-                int bodyX = (w - bodyW) / 2;
-                int bodyY = h - bodyH - 3;
-
+                int headDiam = w / 3, headX = (w - headDiam) / 2, headY = h / 5;
+                g2.setColor(Color.WHITE); g2.fillOval(headX, headY, headDiam, headDiam);
+                int bodyW = (int)(w * 0.58), bodyH = (int)(h * 0.36);
+                int bodyX = (w - bodyW) / 2, bodyY = h - bodyH - 3;
                 Shape oldClip = g2.getClip();
                 g2.setClip(0, h / 2, w, h);
                 g2.fillOval(bodyX, bodyY, bodyW, bodyH);
                 g2.setClip(oldClip);
-
                 g2.dispose();
             }
         };
         btnProfile.setPreferredSize(new Dimension(44, 44));
-        btnProfile.setContentAreaFilled(false);
-        btnProfile.setBorderPainted(false);
-        btnProfile.setFocusPainted(false);
-        btnProfile.setOpaque(false);
+        btnProfile.setContentAreaFilled(false); btnProfile.setBorderPainted(false);
+        btnProfile.setFocusPainted(false); btnProfile.setOpaque(false);
         btnProfile.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnProfile.setToolTipText("Profile — " + loggedInUser.getFullName());
         btnProfile.addActionListener(e -> { /* TODO: open profile panel */ });
@@ -378,20 +420,15 @@ public class DashboardFrame extends JFrame {
         contentArea.setBorder(new EmptyBorder(28, 28, 28, 28));
 
         JPanel heroPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                GradientPaint gp = new GradientPaint(0, 0, LEFT_TOP, getWidth(), getHeight(), LEFT_BOT);
-                g2.setPaint(gp);
+                g2.setPaint(new GradientPaint(0, 0, LEFT_TOP, getWidth(), getHeight(), LEFT_BOT));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 16, 16);
-                g2.setColor(new Color(255, 255, 255, 12));
-                g2.fillOval(getWidth() - 140, -50, 200, 200);
-                g2.setColor(new Color(255, 255, 255, 8));
-                g2.fillOval(getWidth() - 60, getHeight() - 60, 140, 140);
-                g2.setColor(new Color(255, 255, 255, 10));
-                g2.setStroke(new BasicStroke(1.5f));
+                g2.setColor(new Color(255, 255, 255, 12)); g2.fillOval(getWidth() - 140, -50, 200, 200);
+                g2.setColor(new Color(255, 255, 255, 8));  g2.fillOval(getWidth() - 60, getHeight() - 60, 140, 140);
+                g2.setColor(new Color(255, 255, 255, 10)); g2.setStroke(new BasicStroke(1.5f));
                 g2.drawOval(-30, -30, 160, 160);
                 g2.dispose();
             }
@@ -403,14 +440,12 @@ public class DashboardFrame extends JFrame {
         heroPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel heroBadge = new JLabel("  " + loggedInUser.getFullName() + "  ") {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(new Color(255, 255, 255, 30));
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-                g2.dispose();
-                super.paintComponent(g);
+                g2.dispose(); super.paintComponent(g);
             }
         };
         heroBadge.setFont(new Font("SansSerif", Font.BOLD, 11));
@@ -442,12 +477,31 @@ public class DashboardFrame extends JFrame {
         contentArea.add(heroWrapper);
         contentArea.add(Box.createVerticalStrut(24));
 
-        JPanel statsRow = new JPanel(new GridLayout(1, 3, 16, 0));
+        JPanel statsRow = new JPanel(new GridLayout(1, 4, 16, 0)); 
         statsRow.setOpaque(false);
         statsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 110));
-        statsRow.add(buildStatCard("P0.00", "Today's Sales",   "\uD83D\uDCB0", new Color(0xFA, 0xE8, 0xDF), ACCENT));
-        statsRow.add(buildStatCard("0",     "Transactions",    "\uD83D\uDCCB", new Color(0xE1, 0xF0, 0xE8), new Color(0x2E, 0x7D, 0x52)));
-        statsRow.add(buildStatCard("0",     "Low Stock Items", "\uD83D\uDCE6", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00)));
+
+        JPanel salesCard = buildStatCard("₱ 0.00", "Today's Sales",
+            "\uD83D\uDCB0", new Color(0xFA, 0xE8, 0xDF), ACCENT);
+        lblTodaySales = findValueLabel(salesCard);
+
+        JPanel txCard = buildStatCard("0", "Transactions Today",
+            "\uD83D\uDCCB", new Color(0xE1, 0xF0, 0xE8), new Color(0x2E, 0x7D, 0x52));
+        lblTransactions = findValueLabel(txCard);
+
+        JPanel lowCard = buildStatCard("0", "Low Stock Items",
+            "\uD83D\uDCE6", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00));
+        lblLowStock = findValueLabel(lowCard);
+
+        JPanel outOfStockCard = buildStatCard("0", "Out of Stock",
+            "\uD83D\uDEAB", new Color(0xFD, 0xED, 0xEB), new Color(0x9B, 0x2C, 0x1F));
+        lblOutOfStock = findValueLabel(outOfStockCard);
+
+        statsRow.add(salesCard);
+        statsRow.add(txCard);
+        statsRow.add(lowCard);
+        statsRow.add(outOfStockCard);
+
         contentArea.add(statsRow);
         contentArea.add(Box.createVerticalStrut(24));
 
@@ -489,6 +543,22 @@ public class DashboardFrame extends JFrame {
         return scroll;
     }
 
+    private JLabel findValueLabel(JPanel card) {
+        for (Component c : card.getComponents()) {
+            if (c instanceof JPanel) {
+                JPanel inner = (JPanel) c;
+                if (inner.getLayout() instanceof BoxLayout) {
+                    for (Component child : inner.getComponents()) {
+                        if (child instanceof JLabel) {
+                            return (JLabel) child;
+                        }
+                    }
+                }
+            }
+        }
+        return new JLabel();
+    }
+
     private JPanel buildInventoryContent() {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(BG);
@@ -514,19 +584,15 @@ public class DashboardFrame extends JFrame {
         wrapper.add(disposedPanel, BorderLayout.CENTER);
         return wrapper;
     }
-    
-    private JPanel buildSuppliersContent() {
 
+    private JPanel buildSuppliersContent() {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setBackground(BG);
-
         suppliersPanel = new SuppliersPanel(
                 loggedInUser,
                 () -> navigateTo("Dashboard")
         );
-
         wrapper.add(suppliersPanel, BorderLayout.CENTER);
-
         return wrapper;
     }
 
@@ -553,19 +619,19 @@ public class DashboardFrame extends JFrame {
             contentCardPanel.revalidate();
         }
 
+        if ("Dashboard".equals(page)) refreshDashboardStats();
+
         cardLayout.show(contentCardPanel, page);
     }
 
     private JPanel buildStatCard(String value, String label, String emoji, Color bgColor, Color accentColor) {
         JPanel card = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(CARD);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
-                g2.setColor(BORDER_CLR);
-                g2.setStroke(new BasicStroke(1f));
+                g2.setColor(BORDER_CLR); g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
                 g2.dispose();
             }
@@ -591,8 +657,7 @@ public class DashboardFrame extends JFrame {
         left.add(lblLabel);
 
         JLabel emojiBadge = new JLabel(emoji) {
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(bgColor);
@@ -606,7 +671,7 @@ public class DashboardFrame extends JFrame {
         emojiBadge.setVerticalAlignment(SwingConstants.CENTER);
         emojiBadge.setFont(new Font("SansSerif", Font.PLAIN, 20));
 
-        card.add(left, BorderLayout.CENTER);
+        card.add(left,       BorderLayout.CENTER);
         card.add(emojiBadge, BorderLayout.EAST);
         return card;
     }
@@ -622,15 +687,13 @@ public class DashboardFrame extends JFrame {
                 });
                 setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             }
-            @Override
-            protected void paintComponent(Graphics g) {
+            @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(hovered ? accentColor : CARD);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 14, 14);
                 if (!hovered) {
-                    g2.setColor(BORDER_CLR);
-                    g2.setStroke(new BasicStroke(1f));
+                    g2.setColor(BORDER_CLR); g2.setStroke(new BasicStroke(1f));
                     g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
                 }
                 g2.dispose();
@@ -675,12 +738,33 @@ public class DashboardFrame extends JFrame {
         return card;
     }
 
-    private void openPOS()            { JOptionPane.showMessageDialog(this, "POS Module will open here."); }
-    private void openInventoryLogs()  { JOptionPane.showMessageDialog(this, "Inventory Logs will open here."); }
-    private void openSalesHistory()   { JOptionPane.showMessageDialog(this, "Sales History / Analytics will open here."); }
-    private void openSuppliers() {
-        navigateTo("Suppliers");
+    private void openPOS() {
+        if (!posAdded) {
+            contentCardPanel.add(
+                new POSPanel(loggedInUser, () -> navigateTo("Dashboard")),
+                "POS / Sales"
+            );
+            posAdded = true;
+        }
+        navigateTo("POS / Sales");
     }
+
+    private void openInventoryLogs() {
+        if (contentCardPanel.getComponentCount() < 7) {
+            contentCardPanel.add(
+                new InventoryLogPanel(loggedInUser, () -> navigateTo("Dashboard")),
+                "Inventory Logs"
+            );
+        }
+        navigateTo("Inventory Logs");
+    }
+
+    private void openSalesHistory() {
+        JOptionPane.showMessageDialog(this, "Sales History / Analytics will open here.");
+    }
+
+    private void openSuppliers() { navigateTo("Suppliers"); }
+
     private void openCategories() {
         if (contentCardPanel.getComponentCount() < 6) {
             contentCardPanel.add(new CategoryPanel(loggedInUser, () -> navigateTo("Dashboard")), "Categories");

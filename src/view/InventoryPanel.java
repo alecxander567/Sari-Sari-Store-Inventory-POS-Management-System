@@ -69,6 +69,7 @@ public class InventoryPanel extends JPanel {
     private JTextField        searchField;
     private JLabel            chipTotal;
     private JLabel            chipLow;
+    private JLabel            chipOutStock; // new
     private JComboBox<String> cbCategoryFilter;
     private JComboBox<String> cbSort;
     private int               hoveredRow = -1;
@@ -150,7 +151,6 @@ public class InventoryPanel extends JPanel {
         JPanel t = new JPanel(new BorderLayout());
         t.setOpaque(false);
 
-        // ── Search bar — matches SuppliersPanel style ─────────────────────
         JPanel searchWrap = new JPanel(new BorderLayout()) {
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -201,9 +201,12 @@ public class InventoryPanel extends JPanel {
 
         JPanel chips = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         chips.setOpaque(false);
-        chipTotal = buildChip("Total: 0",     new Color(0xE8, 0xF0, 0xFE), new Color(0x1A, 0x5C, 0xB8));
-        chipLow   = buildChip("Low Stock: 0", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00));
-        chips.add(chipTotal); chips.add(chipLow);
+        chipTotal    = buildChip("Total: 0",        new Color(0xE8, 0xF0, 0xFE), new Color(0x1A, 0x5C, 0xB8));
+        chipLow      = buildChip("Low Stock: 0",    new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00));
+        chipOutStock = buildChip("Out of Stock: 0", new Color(0xFD, 0xED, 0xEB), new Color(0x9B, 0x2C, 0x1F));
+        chips.add(chipTotal);
+        chips.add(chipLow);
+        chips.add(chipOutStock);
         t.add(chips, BorderLayout.EAST);
         return t;
     }
@@ -631,10 +634,12 @@ public class InventoryPanel extends JPanel {
         tableModel.setRowCount(0);
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy");
         int lowCount = 0;
+        int outCount = 0;
         for (Product p : products) {
             String status = p.getStockQuantity() == 0 ? "Out of Stock"
                           : p.getStockQuantity() <= 5 ? "Low Stock" : "In Stock";
-            if (!status.equals("In Stock")) lowCount++;
+            if (status.equals("Low Stock"))    lowCount++;
+            if (status.equals("Out of Stock")) outCount++;
             tableModel.addRow(new Object[]{
                 p.getProductId(),
                 p.getProductName(),
@@ -648,6 +653,7 @@ public class InventoryPanel extends JPanel {
         }
         chipTotal.setText("Total: " + products.size());
         chipLow.setText("Low Stock: " + lowCount);
+        chipOutStock.setText("Out of Stock: " + outCount);
     }
 
     private void openProductDialog(Product existing) {
@@ -737,7 +743,7 @@ public class InventoryPanel extends JPanel {
             p.setProductName(name); p.setPrice(price); p.setStockQuantity(qty);
             p.setCategoryId(catId); p.setSupplierId(supId);
             boolean ok = isEdit
-                ? dao.updateProduct(p)
+                ? dao.updateProduct(p, loggedInUser.getUserId())
                 : dao.addProduct(p, loggedInUser.getUserId(), loggedInUser.getStoreId());
             if (ok) {
                 loadProducts();
@@ -954,7 +960,7 @@ public class InventoryPanel extends JPanel {
         Product target = all.stream().filter(p -> p.getProductId() == productId).findFirst().orElse(null);
         if (target == null) { showToast("❌  Product not found.", false); return; }
 
-        boolean ok = dao.disposeProduct(target, reason, loggedInUser.getStoreId());
+        boolean ok = dao.disposeProduct(target, reason, loggedInUser.getStoreId(), loggedInUser.getUserId());
         if (ok) {
             loadProducts();
             showToast("🗑️  \"" + name + "\" moved to Disposed Items.", true);

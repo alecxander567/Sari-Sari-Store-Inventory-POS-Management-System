@@ -1,12 +1,15 @@
 package dao;
 
 import config.DatabaseConnection;
+import model.InventoryLog;
 import model.Product;
 
 import java.sql.*;
 import java.util.*;
 
 public class ProductDAO {
+	
+	private InventoryLogDAO logDAO = new InventoryLogDAO();
 
     public List<Product> getAllProducts(int storeId) {
         List<Product> list = new ArrayList<>();
@@ -56,7 +59,7 @@ public class ProductDAO {
             "INSERT INTO products (product_name, price, stock_quantity, store_id, created_by, category_id, supplier_id)" +
             " VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) { 
             stmt.setString(1, p.getProductName());
             stmt.setBigDecimal(2, p.getPrice());
             stmt.setInt(3, p.getStockQuantity());
@@ -64,24 +67,61 @@ public class ProductDAO {
             stmt.setInt(5, createdByUserId);
             setNullableInt(stmt, 6, p.getCategoryId());
             setNullableInt(stmt, 7, p.getSupplierId());
-            return stmt.executeUpdate() > 0;
+
+            int affected = stmt.executeUpdate();
+            if (affected > 0) {
+                ResultSet keys = stmt.getGeneratedKeys();
+                if (keys.next()) {
+                    int productId = keys.getInt(1);
+
+                    InventoryLog log = new InventoryLog();
+                    log.setProductId(productId);
+                    log.setUserId(createdByUserId);
+                    log.setOperation("ADD");
+                    log.setQuantityChanged(p.getStockQuantity());
+                    logDAO.addLog(log);
+                }
+                return true;
+            }
         } catch (Exception e) { e.printStackTrace(); }
         return false;
     }
 
-    public boolean updateProduct(Product p) {
+    public boolean updateProduct(Product p, int userId) {
         String sql =
             "UPDATE products SET product_name=?, price=?, stock_quantity=?, category_id=?, supplier_id=?" +
             " WHERE product_id=?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            int oldStock = 0;
+            String selectSql = "SELECT stock_quantity FROM products WHERE product_id = ?";
+            try (PreparedStatement sel = conn.prepareStatement(selectSql)) {
+                sel.setInt(1, p.getProductId());
+                ResultSet rs = sel.executeQuery();
+                if (rs.next()) oldStock = rs.getInt("stock_quantity");
+            }
+
             stmt.setString(1, p.getProductName());
             stmt.setBigDecimal(2, p.getPrice());
             stmt.setInt(3, p.getStockQuantity());
             setNullableInt(stmt, 4, p.getCategoryId());
             setNullableInt(stmt, 5, p.getSupplierId());
             stmt.setInt(6, p.getProductId());
-            return stmt.executeUpdate() > 0;
+
+            int affected = stmt.executeUpdate();
+            if (affected > 0) {
+                int diff = p.getStockQuantity() - oldStock; 
+
+                InventoryLog log = new InventoryLog();
+                log.setProductId(p.getProductId());
+                log.setUserId(userId);
+                log.setOperation("UPDATE");
+                log.setQuantityChanged(diff); 
+                logDAO.addLog(log);
+
+                return true;
+            }
         } catch (Exception e) { e.printStackTrace(); }
         return false;
     }
@@ -90,7 +130,7 @@ public class ProductDAO {
      * Saves a snapshot of the product into disposed_items, then hard-deletes
      * the product row. Both run in a single transaction.
      */
-    public boolean disposeProduct(Product product, String reason, int storeId) {
+    public boolean disposeProduct(Product product, String reason, int storeId, int userId) {
         String insertSql =
             "INSERT INTO disposed_items" +
             " (product_id, product_name, price, category_name, supplier_name," +
@@ -111,8 +151,15 @@ public class ProductDAO {
                 ins.setInt(6,        product.getStockQuantity());
                 ins.setString(7,     reason);
                 ins.setInt(8,        storeId);
-                ins.setObject(9,     product.getCreatedBy(), Types.INTEGER);
+                ins.setObject(9,     userId, Types.INTEGER);
                 ins.executeUpdate();
+
+                InventoryLog log = new InventoryLog();
+                log.setProductId(product.getProductId());
+                log.setUserId(userId);
+                log.setOperation("DISPOSE");
+                log.setQuantityChanged(product.getStockQuantity());
+                new InventoryLogDAO().addLog(log);
 
                 del.setInt(1, product.getProductId());
                 del.executeUpdate();
@@ -127,12 +174,21 @@ public class ProductDAO {
         return false;
     }
 
-    public boolean deleteProduct(int productId) {
+    public boolean deleteProduct(int productId, int userId) {
         String sql = "DELETE FROM products WHERE product_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, productId);
-            return stmt.executeUpdate() > 0;
+            int affected = stmt.executeUpdate();
+            if (affected > 0) {
+                InventoryLog log = new InventoryLog();
+                log.setProductId(productId);
+                log.setUserId(userId);
+                log.setOperation("DELETE");
+                log.setQuantityChanged(0);
+                logDAO.addLog(log);
+                return true;
+            }
         } catch (Exception e) { e.printStackTrace(); }
         return false;
     }
