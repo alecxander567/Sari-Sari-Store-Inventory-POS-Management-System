@@ -58,14 +58,39 @@ public class RegisterFrame extends JFrame {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
                 GradientPaint gp = new GradientPaint(0, 0, LEFT_TOP, getWidth(), getHeight(), LEFT_BOT);
                 g2.setPaint(gp);
                 g2.fillRect(0, 0, getWidth(), getHeight());
+
                 g2.setColor(new Color(255, 255, 255, 18));
                 g2.setStroke(new BasicStroke(2f));
                 g2.drawOval(-80, -80, 340, 340);
                 g2.setColor(new Color(255, 255, 255, 10));
                 g2.fillOval(getWidth() - 130, getHeight() - 130, 220, 220);
+
+                g2.setColor(new Color(255, 255, 255, 14));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(getWidth() - 90, -60, 180, 180);
+
+                g2.setColor(new Color(0, 0, 0, 20));
+                g2.fillOval(-60, getHeight() - 100, 200, 200);
+
+                // Dot grid
+                g2.setColor(new Color(255, 255, 255, 25));
+                int dotSpacing = 28;
+                int startX = getWidth() - 130;
+                int startY = 40;
+                for (int row = 0; row < 4; row++) {
+                    for (int col = 0; col < 3; col++) {
+                        g2.fillOval(startX + col * dotSpacing, startY + row * dotSpacing, 3, 3);
+                    }
+                }
+
+                g2.setColor(new Color(255, 213, 128, 40));
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawLine(36, 260, getWidth() - 36, 260);
+
                 g2.dispose();
             }
         };
@@ -75,42 +100,68 @@ public class RegisterFrame extends JFrame {
 
         panel.add(Box.createVerticalGlue());
 
-        JLabel icon = new JLabel("\uD83C\uDFEA") {
+        JPanel pill = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(255, 255, 255, 22));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
+                g2.setColor(new Color(255, 213, 128, 90));
+                g2.setStroke(new BasicStroke(1.2f));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, getHeight(), getHeight());
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        pill.setOpaque(false);
+        pill.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        pill.setAlignmentX(Component.LEFT_ALIGNMENT);
+        pill.setMaximumSize(new Dimension(Integer.MAX_VALUE, 66));
+        pill.setBorder(new EmptyBorder(6, 10, 6, 16));
+
+        JLabel pillIcon = new JLabel("\uD83C\uDFEA") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(GOLD);
-                g2.fillOval(4, 4, getWidth() - 8, getHeight() - 8);
+                g2.fillOval(2, 2, getWidth() - 4, getHeight() - 4);
                 g2.dispose();
                 super.paintComponent(g);
             }
-            @Override public Dimension getPreferredSize() { return new Dimension(80, 80); }
-            @Override public Dimension getMinimumSize()   { return new Dimension(80, 80); }
-            @Override public Dimension getMaximumSize()   { return new Dimension(80, 80); }
+            @Override public Dimension getPreferredSize() { return new Dimension(58, 58); }
+            @Override public Dimension getMinimumSize()   { return new Dimension(58, 58); }
+            @Override public Dimension getMaximumSize()   { return new Dimension(58, 58); }
         };
-        icon.setHorizontalAlignment(SwingConstants.CENTER);
-        icon.setVerticalAlignment(SwingConstants.CENTER);
-        icon.setFont(new Font("SansSerif", Font.PLAIN, 38));
-        icon.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(icon);
-        panel.add(Box.createVerticalStrut(20));
+        pillIcon.setHorizontalAlignment(SwingConstants.CENTER);
+        pillIcon.setVerticalAlignment(SwingConstants.CENTER);
+        pillIcon.setFont(new Font("SansSerif", Font.PLAIN, 36));
+
+        JLabel pillText = new JLabel("Inventory & POS System");
+        pillText.setFont(new Font("SansSerif", Font.BOLD, 18));
+        pillText.setForeground(new Color(255, 235, 180));
+
+        pill.add(pillIcon);
+        pill.add(pillText);
+        panel.add(pill);
+        panel.add(Box.createVerticalStrut(28));
 
         JLabel h1a = new JLabel("Sari-Sari Store");
-        h1a.setFont(FONT_TITLE.deriveFont(Font.BOLD, 42f));
+        h1a.setFont(new Font("SansSerif", Font.BOLD, 58));
         h1a.setForeground(Color.WHITE);
         h1a.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel h1b = new JLabel("Inventory & POS System");
-        h1b.setFont(FONT_TITLE.deriveFont(Font.BOLD, 42f));
+        JLabel h1b = new JLabel("Management System");
+        h1b.setFont(new Font("SansSerif", Font.BOLD, 58));
         h1b.setForeground(GOLD);
         h1b.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel sub = new JLabel("<html>Create your account to start<br>managing your store today.</html>");
-        sub.setFont(FONT_SUB);
+        sub.setFont(new Font("SansSerif", Font.PLAIN, 17));
         sub.setForeground(new Color(255, 255, 255, 155));
         sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sub.setBorder(new EmptyBorder(10, 0, 0, 0));
+        sub.setBorder(new EmptyBorder(12, 0, 0, 0));
 
         panel.add(h1a);
         panel.add(h1b);

@@ -69,10 +69,11 @@ public class InventoryPanel extends JPanel {
     private JTextField        searchField;
     private JLabel            chipTotal;
     private JLabel            chipLow;
-    private JLabel            chipOutStock; // new
+    private JLabel            chipOutStock;
     private JComboBox<String> cbCategoryFilter;
     private JComboBox<String> cbSort;
     private int               hoveredRow = -1;
+    private JComboBox<String> cbStockFilter;
 
     public InventoryPanel(User user, Runnable onBack, Runnable onOpenDisposed) {
         this.loggedInUser   = user;
@@ -201,9 +202,30 @@ public class InventoryPanel extends JPanel {
 
         JPanel chips = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         chips.setOpaque(false);
-        chipTotal    = buildChip("Total: 0",        new Color(0xE8, 0xF0, 0xFE), new Color(0x1A, 0x5C, 0xB8));
-        chipLow      = buildChip("Low Stock: 0",    new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00));
+        chipTotal = buildChip("Total: 0", new Color(0xE8, 0xF0, 0xFE), new Color(0x1A, 0x5C, 0xB8));
+        chipTotal.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        chipTotal.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (cbStockFilter != null) { cbStockFilter.setSelectedItem("All Stock"); applyFilters(); }
+            }
+        });
+
+        chipLow = buildChip("Low Stock: 0", new Color(0xFF, 0xF4, 0xE0), new Color(0xB0, 0x6E, 0x00));
+        chipLow.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        chipLow.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (cbStockFilter != null) { cbStockFilter.setSelectedItem("Low Stock"); applyFilters(); }
+            }
+        });
+
         chipOutStock = buildChip("Out of Stock: 0", new Color(0xFD, 0xED, 0xEB), new Color(0x9B, 0x2C, 0x1F));
+        chipOutStock.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        chipOutStock.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                if (cbStockFilter != null) { cbStockFilter.setSelectedItem("Out of Stock"); applyFilters(); }
+            }
+        });
+        
         chips.add(chipTotal);
         chips.add(chipLow);
         chips.add(chipOutStock);
@@ -300,6 +322,29 @@ public class InventoryPanel extends JPanel {
         cbSort.setPreferredSize(new Dimension(130, 32));
         cbSort.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         cbSort.addActionListener(e -> applyFilters());
+        
+        cbStockFilter = new JComboBox<>(new String[]{
+        	    "All Stock", "In Stock", "Low Stock", "Out of Stock"
+        	}) {
+        	    @Override protected void paintComponent(Graphics g) {
+        	        Graphics2D g2 = (Graphics2D) g.create();
+        	        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        	        g2.setColor(INPUT_BG);
+        	        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+        	        g2.setColor(BORDER_CLR);
+        	        g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
+        	        g2.dispose();
+        	        super.paintComponent(g);
+        	    }
+        	};
+        	cbStockFilter.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        	cbStockFilter.setForeground(TEXT);
+        	cbStockFilter.setBackground(INPUT_BG);
+        	cbStockFilter.setOpaque(false);
+        	cbStockFilter.setBorder(new EmptyBorder(4, 8, 4, 8));
+        	cbStockFilter.setPreferredSize(new Dimension(130, 32));
+        	cbStockFilter.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        	cbStockFilter.addActionListener(e -> applyFilters());
 
         JButton btnEdit   = buildSmallButton("✏️  Edit",    new Color(0xEE, 0xF6, 0xF1), GREEN);
         JButton btnDelete = buildSmallButton("🗑️  Dispose", new Color(0xFD, 0xED, 0xEB), RED);
@@ -307,6 +352,7 @@ public class InventoryPanel extends JPanel {
         btnDelete.addActionListener(e -> deleteSelected());
         actBtns.add(cbCategoryFilter);
         actBtns.add(cbSort);
+        actBtns.add(cbStockFilter);
         actBtns.add(btnEdit);
         actBtns.add(btnDelete);
         cardHeader.add(actBtns, BorderLayout.EAST);
@@ -598,6 +644,12 @@ public class InventoryPanel extends JPanel {
         } else {
             applyFilters();
         }
+        
+        if (cbCategoryFilter == null || cbSort == null || cbStockFilter == null) {
+            populateTable(dao.getAllProducts(loggedInUser.getStoreId()));
+        } else {
+            applyFilters();
+        }
     }
 
     private void applyFilters() {
@@ -616,6 +668,17 @@ public class InventoryPanel extends JPanel {
             for (Product p : list)
                 if (cat.equals(p.getCategoryName())) filtered.add(p);
             list = filtered;
+        }
+        
+        String stockFilter = cbStockFilter != null ? (String) cbStockFilter.getSelectedItem() : "All Stock";
+        if (!"All Stock".equals(stockFilter)) {
+            List<Product> stockFiltered = new java.util.ArrayList<>();
+            for (Product p : list) {
+                String status = p.getStockQuantity() == 0 ? "Out of Stock"
+                              : p.getStockQuantity() <= 5 ? "Low Stock" : "In Stock";
+                if (stockFilter.equals(status)) stockFiltered.add(p);
+            }
+            list = stockFiltered;
         }
 
         switch (sort) {
