@@ -364,7 +364,7 @@ public class DashboardFrame extends JFrame {
         topBar.setOpaque(false);
         topBar.setBorder(new EmptyBorder(18, 28, 18, 28));
 
-        JLabel pageTitle = new JLabel("Dashboard");
+        JLabel pageTitle = new JLabel("Sari-Sari Store Inventory & POS Management System");
         pageTitle.setFont(FONT_TITLE);
         pageTitle.setForeground(Color.WHITE);
 
