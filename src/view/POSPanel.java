@@ -262,7 +262,7 @@ public class POSPanel extends JPanel {
                     double price     = (double) productModel.getValueAt(row, 2);
                     int    stock     = (int)    productModel.getValueAt(row, 3);
                     if (stock <= 0) { showToast("❌  \"" + name + "\" is out of stock.", false); return; }
-                    addToCart(productId, name, price);
+                    addToCart(productId, name, price, stock);  
                 }
             }
         });
@@ -537,15 +537,20 @@ public class POSPanel extends JPanel {
         if (cbCategory.getSelectedIndex() < 0) cbCategory.setSelectedIndex(0);
     }
 
-    private void addToCart(int productId, String name, double price) {
+    private void addToCart(int productId, String name, double price, int stock) {
         for (SaleItem item : cartItems) {
             if (item.getProductId() == productId) {
+                if (item.getQuantity() >= stock) {  
+                    showToast("❌  Not enough stock for \"" + name + "\". Only " + stock + " available.", false);
+                    return;
+                }
                 item.setQuantity(item.getQuantity() + 1);
                 refreshCartTable(); calculateTotal();
                 showToast("➕  Added another \"" + name + "\" to cart.", true);
                 return;
             }
         }
+        // New item — stock must be at least 1 (already checked above, but safe to keep)
         SaleItem item = new SaleItem();
         item.setProductId(productId);
         item.setProductName(name);
