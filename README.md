@@ -15,7 +15,6 @@
 - [Dependencies](#dependencies)
 - [Security](#security)
 - [Screenshots](#screenshots)
-- [Contributing](#contributing)
 
 ---
 
@@ -211,6 +210,47 @@ Standard JDBC driver for MySQL connectivity.
 > **Note:** This application stores passwords using BCrypt. If you find any plain-text passwords in the database from before the security update was applied, they will be automatically migrated to BCrypt on the user's next successful login.
 
 ---
+
+## 📸 Screenshots
+
+### Login Screen
+![Login Screen](img/img1.png)
+
+### Register Screen
+![Register Screen](img/img2.png)
+
+### Dashboard
+![Dashboard](img/img3.png)
+
+### Inventory Management
+![Inventory Panel](img/img4.png)
+
+### Point of Sale (POS)
+![POS Panel](img/img5.png)
+
+### Sales History
+![Sales History](img/img6.png)
+
+### Analytics Charts
+![Analytics Charts](img/img7.png)
+
+### Supplier Management
+![Suppliers Panel](img/img8.png)
+
+### Category Management
+![Category Panel](img/img9.png)
+
+### Profile & Settings
+![Profile Settings](img/img10.png)
+
+### Backup & Restore
+![Backup Restore](img/img11.png)
+
+### Inventory Logs
+![Inventory Logs](img/img12.png)
+
+### Disposed Items
+![Disposed Items](img/img13.png)
 
 ## Color Palette
 
