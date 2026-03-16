@@ -247,8 +247,8 @@ Standard JDBC driver for MySQL connectivity.
 ### Inventory Logs
 ![Inventory Logs](img/img12.png)
 
-### Category Managment
-![Category Managment](img/img13.png)
+### Disposed Items
+![Disposed Items](img/img13.png)
 
 ## Color Palette
 
