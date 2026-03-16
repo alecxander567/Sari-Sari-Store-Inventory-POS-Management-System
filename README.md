@@ -229,7 +229,7 @@ Standard JDBC driver for MySQL connectivity.
 ![POS Panel](img/img5.png)
 
 ### Inventory Logs
-![Sales History](img/img6.png)
+![Inventory Logs](img/img6.png)
 
 ### Analytics Charts
 ![Analytics Charts](img/img7.png)
@@ -244,8 +244,8 @@ Standard JDBC driver for MySQL connectivity.
 ### Supplier Management
 ![Supplier Management](img/img11.png)
 
-### Inventory Logs
-![Inventory Logs](img/img12.png)
+### Category Management
+![Category Management](img/img12.png)
 
 ### Disposed Items
 ![Disposed Items](img/img13.png)
