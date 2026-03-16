@@ -449,7 +449,6 @@ public class Disposeditemspanel extends JPanel {
         for (int i = 0; i < widths.length; i++)
             table.getColumnModel().getColumn(i).setPreferredWidth(widths[i]);
 
-        // Col 1 — Product Name (bold, TEXT)
         table.getColumnModel().getColumn(1).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -461,7 +460,6 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        // Col 2 — Category (plain text, matches date column style)
         table.getColumnModel().getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -474,7 +472,6 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        // Col 3 — Supplier (TEXT for readability, was MUTED)
         table.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -486,7 +483,6 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        // Col 4 — Qty Disposed badge
         table.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -521,7 +517,6 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        // Col 5 — Price (monospaced, TEXT)
         table.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -535,7 +530,6 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        // Col 6 — Reason (italic, TEXT for readability, was MUTED)
         table.getColumnModel().getColumn(6).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {
@@ -550,7 +544,6 @@ public class Disposeditemspanel extends JPanel {
             }
         });
 
-        // Col 7 — Disposed On (centered, TEXT)
         table.getColumnModel().getColumn(7).setCellRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object val,
                     boolean sel, boolean foc, int row, int col) {

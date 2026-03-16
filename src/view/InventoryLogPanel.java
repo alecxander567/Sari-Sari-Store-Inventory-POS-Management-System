@@ -1,7 +1,6 @@
 package view;
 
 import model.InventoryLog;
-
 import model.User;
 import dao.InventoryLogDAO;
 
@@ -17,7 +16,6 @@ import java.util.List;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.awt.print.*;
-import java.time.format.DateTimeFormatter;
 
 public class InventoryLogPanel extends JPanel {
 
@@ -42,11 +40,11 @@ public class InventoryLogPanel extends JPanel {
     private static final Color RED         = new Color(0xC0, 0x39, 0x2B);
     private static final Color AMBER       = new Color(0xB0, 0x6E, 0x00);
 
-    private static final Font FONT_TITLE   = new Font("SansSerif", Font.BOLD,  22);
-    private static final Font FONT_SUB     = new Font("SansSerif", Font.PLAIN, 12);
-    private static final Font FONT_BTN     = new Font("SansSerif", Font.BOLD,  13);
-    private static final Font FONT_TABLE   = new Font("SansSerif", Font.PLAIN, 13);
-    private static final Font FONT_DATE    = new Font("SansSerif", Font.PLAIN, 13);
+    private static final Font FONT_TITLE = new Font("SansSerif", Font.BOLD,  22);
+    private static final Font FONT_SUB   = new Font("SansSerif", Font.PLAIN, 12);
+    private static final Font FONT_BTN   = new Font("SansSerif", Font.BOLD,  13);
+    private static final Font FONT_TABLE = new Font("SansSerif", Font.PLAIN, 13);
+    private static final Font FONT_DATE  = new Font("SansSerif", Font.PLAIN, 13);
 
     private static final String SEARCH_PLACEHOLDER = "Search product or user...";
 
@@ -104,22 +102,21 @@ public class InventoryLogPanel extends JPanel {
         left.add(titleStack);
         bar.add(left, BorderLayout.WEST);
 
-        JButton btnRefresh = buildIconButton("🔄 Refresh", new Color(255, 255, 255, 30), Color.WHITE);
-        btnRefresh.addActionListener(e -> loadLogs());
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         right.setOpaque(false);
-        right.add(btnRefresh);
-        bar.add(right, BorderLayout.EAST);
-        
-        JButton btnExport = buildIconButton("📥 Export CSV", new Color(255, 255, 255, 30), Color.WHITE);
-        btnExport.addActionListener(e -> exportToCSV());
 
-        JButton btnPrint = buildIconButton("🖨️ Print", new Color(255, 255, 255, 30), Color.WHITE);
+        JButton btnExport  = buildIconButton("📥 Export CSV", new Color(255, 255, 255, 30), Color.WHITE);
+        JButton btnPrint   = buildIconButton("🖨️ Print",      new Color(255, 255, 255, 30), Color.WHITE);
+        JButton btnRefresh = buildIconButton("🔄 Refresh",    new Color(255, 255, 255, 30), Color.WHITE);
+
+        btnExport.addActionListener(e -> exportToCSV());
         btnPrint.addActionListener(e -> printLogs());
+        btnRefresh.addActionListener(e -> loadLogs());
 
         right.add(btnExport);
         right.add(btnPrint);
         right.add(btnRefresh);
+        bar.add(right, BorderLayout.EAST);
 
         return bar;
     }
@@ -486,6 +483,9 @@ public class InventoryLogPanel extends JPanel {
         return card;
     }
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // FILTER — uses getLogsByUser so only this user's logs are shown
+    // ══════════════════════════════════════════════════════════════════════════
     private void applyFilter() {
         if (cbOperationFilter == null || searchField == null
                 || cbMonth == null || cbYear == null) return;
@@ -493,11 +493,12 @@ public class InventoryLogPanel extends JPanel {
         String selectedOp    = (String) cbOperationFilter.getSelectedItem();
         String keyword       = searchField.getText().equals(SEARCH_PLACEHOLDER)
                                ? "" : searchField.getText().trim().toLowerCase();
-        int    selectedMonth = cbMonth.getSelectedIndex(); 
+        int    selectedMonth = cbMonth.getSelectedIndex();
         String selectedYear  = (String) cbYear.getSelectedItem();
 
         logModel.setRowCount(0);
-        List<InventoryLog> logs = logDAO.getAllLogs();
+
+        List<InventoryLog> logs = logDAO.getLogsByUser(loggedInUser.getUserId());
 
         for (InventoryLog log : logs) {
             if (!"All Operations".equals(selectedOp)
@@ -532,6 +533,100 @@ public class InventoryLogPanel extends JPanel {
         applyFilter();
     }
 
+    private void exportToCSV() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Save CSV File");
+        fileChooser.setSelectedFile(new java.io.File("inventory_logs.csv"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection != JFileChooser.APPROVE_OPTION) return;
+
+        java.io.File fileToSave = fileChooser.getSelectedFile();
+        String path = fileToSave.getAbsolutePath();
+        if (!path.endsWith(".csv")) path += ".csv";
+
+        try (FileWriter fw = new FileWriter(path)) {
+            fw.write("Product Name,Modified By,Operation,Qty Change,Date & Time\n");
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+            for (int i = 0; i < logModel.getRowCount(); i++) {
+                String productName = logModel.getValueAt(i, 0) != null ? logModel.getValueAt(i, 0).toString() : "";
+                String modifiedBy  = logModel.getValueAt(i, 1) != null ? logModel.getValueAt(i, 1).toString() : "";
+                String operation   = logModel.getValueAt(i, 2) != null ? logModel.getValueAt(i, 2).toString() : "";
+                String qty         = logModel.getValueAt(i, 3) != null ? logModel.getValueAt(i, 3).toString() : "";
+                String date        = "";
+                if (logModel.getValueAt(i, 4) instanceof LocalDateTime)
+                    date = ((LocalDateTime) logModel.getValueAt(i, 4)).format(fmt);
+                fw.write(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
+                    productName, modifiedBy, operation, qty, date));
+            }
+            JOptionPane.showMessageDialog(this, "✅ Exported successfully to:\n" + path,
+                "Export Complete", JOptionPane.INFORMATION_MESSAGE);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "❌ Failed to export: " + ex.getMessage(),
+                "Export Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void printLogs() {
+        PrinterJob job = PrinterJob.getPrinterJob();
+        job.setJobName("Inventory Logs");
+        job.setPrintable((graphics, pageFormat, pageIndex) -> {
+            if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
+            Graphics2D g2 = (Graphics2D) graphics;
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            double x = pageFormat.getImageableX(), y = pageFormat.getImageableY();
+            double width = pageFormat.getImageableWidth();
+            g2.setFont(new Font("SansSerif", Font.BOLD, 14));
+            g2.setColor(Color.BLACK);
+            g2.drawString("Inventory Logs", (int) x, (int) y + 20);
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
+            g2.setColor(Color.GRAY);
+            g2.drawString("Printed on: " + LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm")), (int) x, (int) y + 35);
+            String[] headers = {"Product Name", "Modified By", "Operation", "Qty", "Date & Time"};
+            int[]    colW    = {180, 120, 80, 50, 130};
+            int      rowH = 18, startY = (int) y + 55;
+            g2.setFont(new Font("SansSerif", Font.BOLD, 9));
+            g2.setColor(Color.BLACK);
+            int colX = (int) x;
+            for (int i = 0; i < headers.length; i++) { g2.drawString(headers[i], colX + 2, startY); colX += colW[i]; }
+            startY += 4;
+            g2.drawLine((int) x, startY, (int)(x + width), startY);
+            startY += rowH;
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+            g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
+            for (int i = 0; i < logModel.getRowCount(); i++) {
+                colX = (int) x;
+                String[] values = {
+                    logModel.getValueAt(i, 0) != null ? logModel.getValueAt(i, 0).toString() : "",
+                    logModel.getValueAt(i, 1) != null ? logModel.getValueAt(i, 1).toString() : "",
+                    logModel.getValueAt(i, 2) != null ? logModel.getValueAt(i, 2).toString() : "",
+                    logModel.getValueAt(i, 3) != null ? logModel.getValueAt(i, 3).toString() : "",
+                    logModel.getValueAt(i, 4) instanceof LocalDateTime
+                        ? ((LocalDateTime) logModel.getValueAt(i, 4)).format(fmt) : ""
+                };
+                for (int j = 0; j < values.length; j++) {
+                    String text = values[j];
+                    while (text.length() > 0 && g2.getFontMetrics().stringWidth(text) > colW[j] - 4)
+                        text = text.substring(0, text.length() - 1);
+                    g2.drawString(text, colX + 2, startY);
+                    colX += colW[j];
+                }
+                startY += rowH;
+            }
+            return Printable.PAGE_EXISTS;
+        });
+        if (job.printDialog()) {
+            try { job.print(); }
+            catch (PrinterException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "❌ Print failed: " + ex.getMessage(),
+                    "Print Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
     private JButton buildIconButton(String text, Color bg, Color fg) {
         JButton btn = new JButton(text) {
             @Override protected void paintComponent(Graphics g) {
@@ -548,132 +643,6 @@ public class InventoryLogPanel extends JPanel {
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(new EmptyBorder(8, 16, 8, 16));
         return btn;
-    }
-    
-    private void exportToCSV() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Save CSV File");
-        fileChooser.setSelectedFile(new java.io.File("inventory_logs.csv"));
-
-        int userSelection = fileChooser.showSaveDialog(this);
-        if (userSelection != JFileChooser.APPROVE_OPTION) return;
-
-        java.io.File fileToSave = fileChooser.getSelectedFile();
-        String path = fileToSave.getAbsolutePath();
-        if (!path.endsWith(".csv")) path += ".csv";
-
-        try (FileWriter fw = new FileWriter(path)) {
-            fw.write("Product Name,Modified By,Operation,Qty Change,Date & Time\n");
-
-            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
-            for (int i = 0; i < logModel.getRowCount(); i++) {
-                String productName = logModel.getValueAt(i, 0) != null
-                                     ? logModel.getValueAt(i, 0).toString() : "";
-                String modifiedBy  = logModel.getValueAt(i, 1) != null
-                                     ? logModel.getValueAt(i, 1).toString() : "";
-                String operation   = logModel.getValueAt(i, 2) != null
-                                     ? logModel.getValueAt(i, 2).toString() : "";
-                String qty         = logModel.getValueAt(i, 3) != null
-                                     ? logModel.getValueAt(i, 3).toString() : "";
-                String date        = "";
-                if (logModel.getValueAt(i, 4) instanceof LocalDateTime) {
-                    date = ((LocalDateTime) logModel.getValueAt(i, 4)).format(fmt);
-                }
-
-                fw.write(String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"\n",
-                    productName, modifiedBy, operation, qty, date));
-            }
-
-            JOptionPane.showMessageDialog(this,
-                "✅ Exported successfully to:\n" + path,
-                "Export Complete", JOptionPane.INFORMATION_MESSAGE);
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                "❌ Failed to export: " + ex.getMessage(),
-                "Export Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void printLogs() {
-        PrinterJob job = PrinterJob.getPrinterJob();
-        job.setJobName("Inventory Logs");
-
-        job.setPrintable((graphics, pageFormat, pageIndex) -> {
-            if (pageIndex > 0) return Printable.NO_SUCH_PAGE;
-
-            Graphics2D g2 = (Graphics2D) graphics;
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            double x      = pageFormat.getImageableX();
-            double y      = pageFormat.getImageableY();
-            double width  = pageFormat.getImageableWidth();
-
-            g2.setFont(new Font("SansSerif", Font.BOLD, 14));
-            g2.setColor(Color.BLACK);
-            g2.drawString("Inventory Logs", (int) x, (int) y + 20);
-
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
-            g2.setColor(Color.GRAY);
-            String printedOn = "Printed on: " + LocalDateTime.now()
-                .format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"));
-            g2.drawString(printedOn, (int) x, (int) y + 35);
-
-            String[] headers = {"Product Name", "Modified By", "Operation", "Qty", "Date & Time"};
-            int[]    colW    = {180, 120, 80, 50, 130};
-            int      rowH    = 18;
-            int      startY  = (int) y + 55;
-
-            g2.setFont(new Font("SansSerif", Font.BOLD, 9));
-            g2.setColor(Color.BLACK);
-            int colX = (int) x;
-            for (int i = 0; i < headers.length; i++) {
-                g2.drawString(headers[i], colX + 2, startY);
-                colX += colW[i];
-            }
-
-            startY += 4;
-            g2.drawLine((int) x, startY, (int) (x + width), startY);
-            startY += rowH;
-
-            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
-            g2.setFont(new Font("SansSerif", Font.PLAIN, 9));
-            for (int i = 0; i < logModel.getRowCount(); i++) {
-                colX = (int) x;
-                String[] values = {
-                    logModel.getValueAt(i, 0) != null ? logModel.getValueAt(i, 0).toString() : "",
-                    logModel.getValueAt(i, 1) != null ? logModel.getValueAt(i, 1).toString() : "",
-                    logModel.getValueAt(i, 2) != null ? logModel.getValueAt(i, 2).toString() : "",
-                    logModel.getValueAt(i, 3) != null ? logModel.getValueAt(i, 3).toString() : "",
-                    logModel.getValueAt(i, 4) instanceof LocalDateTime
-                        ? ((LocalDateTime) logModel.getValueAt(i, 4)).format(fmt) : ""
-                };
-                for (int j = 0; j < values.length; j++) {
-                    String text = values[j];
-                    while (text.length() > 0 &&
-                           g2.getFontMetrics().stringWidth(text) > colW[j] - 4) {
-                        text = text.substring(0, text.length() - 1);
-                    }
-                    g2.drawString(text, colX + 2, startY);
-                    colX += colW[j];
-                }
-                startY += rowH;
-            }
-
-            return Printable.PAGE_EXISTS;
-        });
-
-        if (job.printDialog()) {
-            try {
-                job.print();
-            } catch (PrinterException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this,
-                    "❌ Print failed: " + ex.getMessage(),
-                    "Print Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
     }
 
     private JButton buildSmallButton(String text, Color bg, Color fg) {

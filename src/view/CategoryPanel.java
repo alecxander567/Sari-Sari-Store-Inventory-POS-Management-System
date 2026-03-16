@@ -89,9 +89,7 @@ public class CategoryPanel extends JPanel {
         left.setOpaque(false);
 
         JButton btnBack = buildIconButton("<- Back", new Color(255, 255, 255, 30), Color.WHITE);
-        btnBack.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { onBack.run(); }
-        });
+        btnBack.addActionListener(e -> onBack.run());
 
         JPanel titleStack = new JPanel();
         titleStack.setLayout(new BoxLayout(titleStack, BoxLayout.Y_AXIS));
@@ -156,9 +154,7 @@ public class CategoryPanel extends JPanel {
         lbl.setFont(FONT_LABEL);
         lbl.setForeground(MUTED);
         txtName = buildInputField();
-        txtName.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { addCategory(); }
-        });
+        txtName.addActionListener(e -> addCategory());
         fieldWrap.add(lbl,     BorderLayout.NORTH);
         fieldWrap.add(txtName, BorderLayout.CENTER);
 
@@ -171,22 +167,14 @@ public class CategoryPanel extends JPanel {
         btnAdd    = buildFilledButton("+ Add Category");
         btnUpdate = buildSecondaryButton("✎  Update");
         btnDelete = buildDangerButton("\uD83D\uDDD1  Delete");
-        JButton btnClear = buildGhostButton("Clear", new ActionListener() {
-            public void actionPerformed(ActionEvent e) { clearForm(); }
-        });
+        JButton btnClear = buildGhostButton("Clear", e -> clearForm());
 
         btnUpdate.setEnabled(false);
         btnDelete.setEnabled(false);
 
-        btnAdd.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { addCategory(); }
-        });
-        btnUpdate.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { updateCategory(); }
-        });
-        btnDelete.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { deleteCategory(); }
-        });
+        btnAdd.addActionListener(e -> addCategory());
+        btnUpdate.addActionListener(e -> updateCategory());
+        btnDelete.addActionListener(e -> deleteCategory());
 
         JPanel btnGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         btnGroup.setOpaque(false);
@@ -262,19 +250,17 @@ public class CategoryPanel extends JPanel {
             }
         };
 
-        table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-            public void valueChanged(ListSelectionEvent e) {
-                if (e.getValueIsAdjusting()) return;
-                int row = table.getSelectedRow();
-                if (row != -1) {
-                    txtName.setText(tableModel.getValueAt(row, 1).toString());
-                    btnUpdate.setEnabled(true);
-                    btnDelete.setEnabled(true);
-                    btnAdd.setEnabled(false);
-                    btnUpdate.repaint();
-                    btnDelete.repaint();
-                    btnAdd.repaint();
-                }
+        table.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting()) return;
+            int row = table.getSelectedRow();
+            if (row != -1) {
+                txtName.setText(tableModel.getValueAt(row, 1).toString());
+                btnUpdate.setEnabled(true);
+                btnDelete.setEnabled(true);
+                btnAdd.setEnabled(false);
+                btnUpdate.repaint();
+                btnDelete.repaint();
+                btnAdd.repaint();
             }
         });
 
@@ -383,7 +369,7 @@ public class CategoryPanel extends JPanel {
         tableModel.setRowCount(0);
         SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy");
         try {
-            List<Category> list = categoryDAO.getAllCategories();
+            List<Category> list = categoryDAO.getAllCategories(loggedInUser.getStoreId());
             for (Category cat : list) {
                 String dateStr = cat.getCreatedAt() != null ? sdf.format(cat.getCreatedAt()) : "—";
                 tableModel.addRow(new Object[]{cat.getId(), cat.getName(), dateStr});
@@ -403,7 +389,7 @@ public class CategoryPanel extends JPanel {
                 "Validation", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        if (categoryDAO.addCategory(name)) {
+        if (categoryDAO.addCategory(name, loggedInUser.getStoreId())) {
             loadCategories();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to add category.",
@@ -421,7 +407,7 @@ public class CategoryPanel extends JPanel {
             return;
         }
         int id = (int) tableModel.getValueAt(row, 0);
-        if (categoryDAO.updateCategory(id, name)) {
+        if (categoryDAO.updateCategory(id, name, loggedInUser.getStoreId())) {
             loadCategories();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to update category.",
@@ -569,12 +555,8 @@ public class CategoryPanel extends JPanel {
         btnConfirm.setBorder(new EmptyBorder(9, 20, 9, 20));
 
         final boolean[] confirmed = {false};
-        btnCancel.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { dialog.dispose(); }
-        });
-        btnConfirm.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) { confirmed[0] = true; dialog.dispose(); }
-        });
+        btnCancel.addActionListener(e -> dialog.dispose());
+        btnConfirm.addActionListener(e -> { confirmed[0] = true; dialog.dispose(); });
 
         footer.add(btnCancel);
         footer.add(btnConfirm);
@@ -584,7 +566,7 @@ public class CategoryPanel extends JPanel {
         if (!confirmed[0]) return;
 
         int id = (int) tableModel.getValueAt(row, 0);
-        if (categoryDAO.deleteCategory(id)) {
+        if (categoryDAO.deleteCategory(id, loggedInUser.getStoreId())) {
             loadCategories();
         } else {
             JOptionPane.showMessageDialog(this, "Failed to delete category.",

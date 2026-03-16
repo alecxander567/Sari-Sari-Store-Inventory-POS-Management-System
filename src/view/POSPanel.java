@@ -62,7 +62,7 @@ public class POSPanel extends JPanel {
     private JLabel            lblChange;
     private JTextField        searchField;
     private JComboBox<String> cbCategory;
-    private JComboBox<String> cbSort;          
+    private JComboBox<String> cbSort;
     private List<SaleItem>    cartItems = new ArrayList<>();
 
     private final List<Object[]> allProductRows = new ArrayList<>();
@@ -102,13 +102,10 @@ public class POSPanel extends JPanel {
         titleStack.setLayout(new BoxLayout(titleStack, BoxLayout.Y_AXIS));
         titleStack.setOpaque(false);
         JLabel title = new JLabel("🛒 Point of Sale");
-        title.setFont(FONT_TITLE);
-        title.setForeground(Color.WHITE);
+        title.setFont(FONT_TITLE); title.setForeground(Color.WHITE);
         JLabel sub = new JLabel("Search or double-click a product to add it to the cart");
-        sub.setFont(FONT_SUB);
-        sub.setForeground(new Color(255, 255, 255, 170));
-        titleStack.add(title);
-        titleStack.add(sub);
+        sub.setFont(FONT_SUB); sub.setForeground(new Color(255, 255, 255, 170));
+        titleStack.add(title); titleStack.add(sub);
 
         left.add(btnBack);
         left.add(Box.createHorizontalStrut(6));
@@ -147,13 +144,10 @@ public class POSPanel extends JPanel {
         stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
         stack.setOpaque(false);
         JLabel lTitle = new JLabel("Product List");
-        lTitle.setFont(new Font("SansSerif", Font.BOLD, 15));
-        lTitle.setForeground(TEXT);
+        lTitle.setFont(new Font("SansSerif", Font.BOLD, 15)); lTitle.setForeground(TEXT);
         JLabel lSub = new JLabel("Double-click a row to add to cart");
-        lSub.setFont(FONT_SUB);
-        lSub.setForeground(MUTED);
-        stack.add(lTitle);
-        stack.add(lSub);
+        lSub.setFont(FONT_SUB); lSub.setForeground(MUTED);
+        stack.add(lTitle); stack.add(lSub);
         headerTop.add(stack, BorderLayout.WEST);
 
         JPanel filterRow = new JPanel(new BorderLayout(6, 0));
@@ -466,11 +460,9 @@ public class POSPanel extends JPanel {
                 g2.setColor(INPUT_BG);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
                 if (isFocusOwner()) {
-                    g2.setColor(ACCENT);
-                    g2.setStroke(new BasicStroke(2f));
+                    g2.setColor(ACCENT); g2.setStroke(new BasicStroke(2f));
                 } else {
-                    g2.setColor(new Color(0xB0, 0x88, 0x68));
-                    g2.setStroke(new BasicStroke(1.5f));
+                    g2.setColor(new Color(0xB0, 0x88, 0x68)); g2.setStroke(new BasicStroke(1.5f));
                 }
                 g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 8, 8);
                 g2.dispose();
@@ -525,7 +517,7 @@ public class POSPanel extends JPanel {
             String nb = (String) b[1];
             return "Name Z → A".equals(sort)
                 ? nb.compareToIgnoreCase(na)
-                : na.compareToIgnoreCase(nb);   
+                : na.compareToIgnoreCase(nb);
         });
 
         productModel.setRowCount(0);
@@ -659,13 +651,17 @@ public class POSPanel extends JPanel {
 
     private void loadProducts() {
         allProductRows.clear();
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            String sql = "SELECT p.product_id, p.product_name, p.price, p.stock_quantity, " +
-                         "COALESCE(c.category_name, '') AS category_name " +
-                         "FROM products p " +
-                         "LEFT JOIN categories c ON p.category_id = c.category_id";
-            ResultSet rs = conn.prepareStatement(sql).executeQuery();
+        int storeId = loggedInUser.getStoreId() != null ? loggedInUser.getStoreId() : -1;
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql =
+                "SELECT p.product_id, p.product_name, p.price, p.stock_quantity, " +
+                "COALESCE(c.category_name, '') AS category_name " +
+                "FROM products p " +
+                "LEFT JOIN categories c ON p.category_id = c.category_id " +
+                "WHERE p.store_id = ?";   // ← filtered by store
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, storeId);
+            ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 allProductRows.add(new Object[]{
                     rs.getInt("product_id"),
@@ -790,15 +786,12 @@ public class POSPanel extends JPanel {
         row.setOpaque(false);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         JLabel lProduct = new JLabel("PRODUCT");
-        lProduct.setFont(new Font("SansSerif", Font.BOLD, 11));
-        lProduct.setForeground(MUTED);
+        lProduct.setFont(new Font("SansSerif", Font.BOLD, 11)); lProduct.setForeground(MUTED);
         JPanel right = new JPanel(new GridLayout(1, 3, 0, 0));
-        right.setOpaque(false);
-        right.setPreferredSize(new Dimension(210, 26));
+        right.setOpaque(false); right.setPreferredSize(new Dimension(210, 26));
         for (String h : new String[]{"QTY", "PRICE", "SUBTOTAL"}) {
             JLabel l = new JLabel(h, SwingConstants.CENTER);
-            l.setFont(new Font("SansSerif", Font.BOLD, 11));
-            l.setForeground(MUTED);
+            l.setFont(new Font("SansSerif", Font.BOLD, 11)); l.setForeground(MUTED);
             right.add(l);
         }
         row.add(lProduct, BorderLayout.CENTER);
@@ -811,11 +804,9 @@ public class POSPanel extends JPanel {
         row.setOpaque(false);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
         JLabel lName = new JLabel(name);
-        lName.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        lName.setForeground(TEXT);
+        lName.setFont(new Font("SansSerif", Font.PLAIN, 13)); lName.setForeground(TEXT);
         JPanel right = new JPanel(new GridLayout(1, 3, 0, 0));
-        right.setOpaque(false);
-        right.setPreferredSize(new Dimension(210, 28));
+        right.setOpaque(false); right.setPreferredSize(new Dimension(210, 28));
         JLabel lQty   = new JLabel(String.valueOf(qty), SwingConstants.CENTER);
         lQty.setFont(new Font("SansSerif", Font.BOLD, 13)); lQty.setForeground(TEXT);
         JLabel lPrice = new JLabel(String.format("₱ %.2f", price), SwingConstants.CENTER);

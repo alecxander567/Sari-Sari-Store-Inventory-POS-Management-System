@@ -29,7 +29,6 @@ public class SuppliersPanel extends JPanel {
     private static final Color RED         = new Color(0xC0, 0x39, 0x2B);
     private static final Color RED_DARK    = new Color(0x96, 0x1A, 0x10);
     private static final Color GREEN       = new Color(0x2E, 0x7D, 0x52);
-
     private static final Color AVATAR_BG   = new Color(0xFA, 0xEC, 0xE7);
     private static final Color AVATAR_FG   = new Color(0x99, 0x3C, 0x1D);
     private static final Color CARD_FOOT   = new Color(0xFD, 0xFB, 0xF8);
@@ -152,7 +151,6 @@ public class SuppliersPanel extends JPanel {
         searchField.setText(PLACEHOLDER);
         searchField.setOpaque(false);
         searchField.setBorder(new EmptyBorder(6, 4, 6, 10));
-        searchField.setToolTipText("Search by name, phone, email or address");
 
         searchField.addFocusListener(new FocusAdapter() {
             @Override public void focusGained(FocusEvent e) {
@@ -211,7 +209,7 @@ public class SuppliersPanel extends JPanel {
     }
 
     private void loadSuppliers() {
-        allSuppliers = new SupplierDAO().getAllSuppliers();
+        allSuppliers = new SupplierDAO().getAllSuppliers(loggedInUser.getStoreId());
         filterCards();
     }
 
@@ -316,7 +314,6 @@ public class SuppliersPanel extends JPanel {
         JLabel nameLabel = new JLabel(truncate(s.getSupplierName(), 28));
         nameLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
         nameLabel.setForeground(TEXT);
-        
         JLabel seqLabel = new JLabel("Supplier #" + displayIndex);
         seqLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
         seqLabel.setForeground(MUTED);
@@ -464,9 +461,9 @@ public class SuppliersPanel extends JPanel {
         form.setBorder(new EmptyBorder(20, 28, 10, 28));
 
         final JTextField fName    = buildFormField(form, "Supplier Name *", isEdit ? existing.getSupplierName() : "");
-        final JTextField fPhone   = buildFormField(form, "Phone",  isEdit && existing.getContactNumber() != null ? existing.getContactNumber() : "");
-        final JTextField fEmail   = buildFormField(form, "Email",  isEdit && existing.getEmail()         != null ? existing.getEmail()         : "");
-        final JTextField fAddress = buildFormField(form, "Address",isEdit && existing.getAddress()       != null ? existing.getAddress()       : "");
+        final JTextField fPhone   = buildFormField(form, "Phone",   isEdit && existing.getContactNumber() != null ? existing.getContactNumber() : "");
+        final JTextField fEmail   = buildFormField(form, "Email",   isEdit && existing.getEmail()         != null ? existing.getEmail()         : "");
+        final JTextField fAddress = buildFormField(form, "Address", isEdit && existing.getAddress()       != null ? existing.getAddress()       : "");
 
         JScrollPane formScroll = new JScrollPane(form);
         formScroll.setBorder(null);
@@ -485,7 +482,8 @@ public class SuppliersPanel extends JPanel {
         btnSave.addActionListener(e -> {
             String name = fName.getText().trim();
             if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Supplier name is required.", "Validation", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(dialog, "Supplier name is required.",
+                    "Validation", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             SupplierDAO dao = new SupplierDAO();
@@ -497,10 +495,11 @@ public class SuppliersPanel extends JPanel {
                 upd.setContactNumber(fPhone.getText().trim());
                 upd.setEmail(fEmail.getText().trim());
                 upd.setAddress(fAddress.getText().trim());
-                ok = dao.updateSupplier(upd);
+                ok = dao.updateSupplier(upd, loggedInUser.getStoreId());
             } else {
                 ok = dao.addSupplier(new Supplier(name,
-                    fPhone.getText().trim(), fEmail.getText().trim(), fAddress.getText().trim()));
+                    fPhone.getText().trim(), fEmail.getText().trim(),
+                    fAddress.getText().trim()), loggedInUser.getStoreId());
             }
             if (ok) { dialog.dispose(); loadSuppliers(); }
             else JOptionPane.showMessageDialog(dialog,
@@ -549,12 +548,16 @@ public class SuppliersPanel extends JPanel {
         hStack.setLayout(new BoxLayout(hStack, BoxLayout.Y_AXIS));
         hStack.setOpaque(false);
         JLabel hTitle = new JLabel("Remove Supplier");
-        hTitle.setFont(new Font("SansSerif", Font.BOLD, 17)); hTitle.setForeground(Color.WHITE);
+        hTitle.setFont(new Font("SansSerif", Font.BOLD, 17));
+        hTitle.setForeground(Color.WHITE);
         JLabel hSub = new JLabel("This will permanently delete the supplier record");
         hSub.setFont(new Font("SansSerif", Font.PLAIN, 12));
         hSub.setForeground(new Color(255, 255, 255, 170));
-        hStack.add(hTitle); hStack.add(Box.createVerticalStrut(3)); hStack.add(hSub);
-        hLeft.add(hIcon); hLeft.add(hStack);
+        hStack.add(hTitle);
+        hStack.add(Box.createVerticalStrut(3));
+        hStack.add(hSub);
+        hLeft.add(hIcon);
+        hLeft.add(hStack);
         header.add(hLeft, BorderLayout.WEST);
         root.add(header, BorderLayout.NORTH);
 
@@ -572,7 +575,8 @@ public class SuppliersPanel extends JPanel {
                 g2.setColor(new Color(0xF0, 0xE4, 0xD8));
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
         infoCard.setOpaque(false);
@@ -600,7 +604,8 @@ public class SuppliersPanel extends JPanel {
                 g2.setColor(new Color(0xF0, 0xD8, 0x90));
                 g2.setStroke(new BasicStroke(1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
         warnBanner.setOpaque(false);
@@ -624,13 +629,16 @@ public class SuppliersPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getModel().isRollover() ? RED_DARK : RED);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
         btnConfirm.setFont(new Font("SansSerif", Font.BOLD, 13));
         btnConfirm.setForeground(Color.WHITE);
-        btnConfirm.setContentAreaFilled(false); btnConfirm.setBorderPainted(false);
-        btnConfirm.setFocusPainted(false); btnConfirm.setOpaque(false);
+        btnConfirm.setContentAreaFilled(false);
+        btnConfirm.setBorderPainted(false);
+        btnConfirm.setFocusPainted(false);
+        btnConfirm.setOpaque(false);
         btnConfirm.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnConfirm.setBorder(new EmptyBorder(9, 22, 9, 22));
 
@@ -638,21 +646,25 @@ public class SuppliersPanel extends JPanel {
         btnCancel.addActionListener(e -> dialog.dispose());
         btnConfirm.addActionListener(e -> { confirmed[0] = true; dialog.dispose(); });
 
-        footer.add(btnCancel); footer.add(btnConfirm);
+        footer.add(btnCancel);
+        footer.add(btnConfirm);
         root.add(footer, BorderLayout.SOUTH);
         dialog.setVisible(true);
 
         if (!confirmed[0]) return;
-        if (new SupplierDAO().deleteSupplier(s.getSupplierId())) {
+        // ── Pass store_id so only this store's supplier can be deleted ─────────
+        if (new SupplierDAO().deleteSupplier(s.getSupplierId(), loggedInUser.getStoreId())) {
             loadSuppliers();
         } else {
-            JOptionPane.showMessageDialog(this, "Failed to remove supplier.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Failed to remove supplier.",
+                "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private JTextField buildFormField(JPanel parent, String labelText, String value) {
         JLabel lbl = new JLabel(labelText);
-        lbl.setFont(FONT_LABEL); lbl.setForeground(MUTED);
+        lbl.setFont(FONT_LABEL);
+        lbl.setForeground(MUTED);
         lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
         parent.add(lbl);
         parent.add(Box.createVerticalStrut(5));
@@ -666,11 +678,14 @@ public class SuppliersPanel extends JPanel {
                 g2.setColor(isFocusOwner() ? ACCENT : BORDER_CLR);
                 g2.setStroke(new BasicStroke(isFocusOwner() ? 1.5f : 1f));
                 g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
-        field.setFont(FONT_INPUT); field.setForeground(TEXT);
-        field.setOpaque(false); field.setBorder(new EmptyBorder(8, 12, 8, 12));
+        field.setFont(FONT_INPUT);
+        field.setForeground(TEXT);
+        field.setOpaque(false);
+        field.setBorder(new EmptyBorder(8, 12, 8, 12));
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         field.setAlignmentX(Component.LEFT_ALIGNMENT);
         field.addFocusListener(new FocusAdapter() {
@@ -692,7 +707,9 @@ public class SuppliersPanel extends JPanel {
         JLabel val = new JLabel(value);
         val.setFont(new Font("SansSerif", Font.BOLD, 13));
         val.setForeground(TEXT);
-        cell.add(lbl); cell.add(Box.createVerticalStrut(3)); cell.add(val);
+        cell.add(lbl);
+        cell.add(Box.createVerticalStrut(3));
+        cell.add(val);
         return cell;
     }
 
@@ -702,16 +719,20 @@ public class SuppliersPanel extends JPanel {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 Color c = getModel().isRollover()
-                    ? new Color(Math.max(0, bg.getRed()-15), Math.max(0, bg.getGreen()-15), Math.max(0, bg.getBlue()-15))
-                    : bg;
+                    ? new Color(Math.max(0, bg.getRed()-15), Math.max(0, bg.getGreen()-15),
+                                Math.max(0, bg.getBlue()-15)) : bg;
                 g2.setColor(c);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
-        btn.setFont(new Font("SansSerif", Font.BOLD, 12)); btn.setForeground(fg);
-        btn.setContentAreaFilled(false); btn.setBorderPainted(false);
-        btn.setFocusPainted(false); btn.setOpaque(false);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 12));
+        btn.setForeground(fg);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(new EmptyBorder(7, 16, 7, 16));
         return btn;
@@ -724,12 +745,16 @@ public class SuppliersPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setColor(getModel().isRollover() ? ACCENT_DARK : ACCENT);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
-        btn.setFont(new Font("SansSerif", Font.BOLD, 13)); btn.setForeground(Color.WHITE);
-        btn.setContentAreaFilled(false); btn.setBorderPainted(false);
-        btn.setFocusPainted(false); btn.setOpaque(false);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 13));
+        btn.setForeground(Color.WHITE);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(new EmptyBorder(8, 20, 8, 20));
         return btn;
@@ -742,16 +767,19 @@ public class SuppliersPanel extends JPanel {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 Color c = getModel().isRollover()
                     ? new Color(Math.max(0, bg.getRed()-15), Math.max(0, bg.getGreen()-15),
-                                Math.max(0, bg.getBlue()-15), bg.getAlpha())
-                    : bg;
+                                Math.max(0, bg.getBlue()-15), bg.getAlpha()) : bg;
                 g2.setColor(c);
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.dispose(); super.paintComponent(g);
+                g2.dispose();
+                super.paintComponent(g);
             }
         };
-        btn.setFont(FONT_BTN); btn.setForeground(fg);
-        btn.setContentAreaFilled(false); btn.setBorderPainted(false);
-        btn.setFocusPainted(false); btn.setOpaque(false);
+        btn.setFont(FONT_BTN);
+        btn.setForeground(fg);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.setBorder(new EmptyBorder(8, 16, 8, 16));
         return btn;
@@ -767,10 +795,5 @@ public class SuppliersPanel extends JPanel {
     private String truncate(String s, int max) {
         if (s == null) return "";
         return s.length() > max ? s.substring(0, max - 1) + "…" : s;
-    }
-
-    private String escapeHtml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
     }
 }

@@ -199,7 +199,31 @@ public class LoginFrame extends JFrame {
         form.add(txtUsername);
         form.add(Box.createVerticalStrut(14));
 
-        form.add(buildFieldLabel("PASSWORD"));
+        JPanel passwordLabelRow = new JPanel(new BorderLayout());
+        passwordLabelRow.setOpaque(false);
+        passwordLabelRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        passwordLabelRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        passwordLabelRow.add(buildFieldLabel("PASSWORD"), BorderLayout.WEST);
+
+        JLabel forgotLink = new JLabel("<html><u>Forgot password?</u></html>");
+        forgotLink.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        forgotLink.setForeground(ACCENT);
+        forgotLink.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        forgotLink.addMouseListener(new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) {
+                new ForgotPasswordDialog(LoginFrame.this).setVisible(true);
+            }
+            @Override public void mouseEntered(MouseEvent e) {
+                forgotLink.setForeground(ACCENT_DARK);
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                forgotLink.setForeground(ACCENT);
+            }
+        });
+        passwordLabelRow.add(forgotLink, BorderLayout.EAST);
+        form.add(passwordLabelRow);
+
+        form.add(Box.createVerticalStrut(6));
         txtPassword = new JPasswordField(14);
         txtPassword.setFont(FONT_INPUT);
         styleInput(txtPassword);
@@ -209,6 +233,9 @@ public class LoginFrame extends JFrame {
         btnLogin = buildButton("Sign In", ACCENT, Color.WHITE, true);
         btnLogin.setAlignmentX(Component.LEFT_ALIGNMENT);
         btnLogin.addActionListener(e -> loginUser());
+
+        txtPassword.addActionListener(e -> loginUser());
+
         form.add(btnLogin);
         form.add(Box.createVerticalStrut(10));
 
@@ -282,7 +309,6 @@ public class LoginFrame extends JFrame {
                 super.paintComponent(g);
             }
         };
-        
         btn.setFont(FONT_BTN);
         btn.setForeground(fg);
         btn.setContentAreaFilled(false);
@@ -329,7 +355,9 @@ public class LoginFrame extends JFrame {
         String password = new String(txtPassword.getPassword()).trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter both username and password.", "Missing Fields", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                "Please enter both username and password.",
+                "Missing Fields", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -337,12 +365,16 @@ public class LoginFrame extends JFrame {
         User user = userDAO.login(username, password);
 
         if (user != null) {
-            JOptionPane.showMessageDialog(this, "Login Successful! Welcome " + user.getFullName(), "Success", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                "Login Successful! Welcome " + user.getFullName(),
+                "Success", JOptionPane.INFORMATION_MESSAGE);
             String storeName = new dao.userDAO().getStoreName(user.getStoreId());
             dispose();
             SwingUtilities.invokeLater(() -> new DashboardFrame(user, storeName));
         } else {
-            JOptionPane.showMessageDialog(this, "Invalid username or password!", "Login Failed", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                "Invalid username or password!",
+                "Login Failed", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -360,7 +392,7 @@ public class LoginFrame extends JFrame {
 
     static class RoundBorder extends AbstractBorder {
         private final Color color;
-        private final int radius;
+        private final int   radius;
         private final float thickness;
         RoundBorder(Color color, int radius, float thickness) {
             this.color = color; this.radius = radius; this.thickness = thickness;
