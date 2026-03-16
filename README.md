@@ -228,29 +228,27 @@ Standard JDBC driver for MySQL connectivity.
 ### Point of Sale (POS)
 ![POS Panel](img/img5.png)
 
-### Sales History
+### Inventory Logs
 ![Sales History](img/img6.png)
 
 ### Analytics Charts
 ![Analytics Charts](img/img7.png)
 
-### Supplier Management
-![Suppliers Panel](img/img8.png)
+![Analytics Chartsl](img/img8.png)
 
-### Category Management
-![Category Panel](img/img9.png)
+### Profile and Settings
+![Profile Settings](img/img9.png)
 
-### Profile & Settings
 ![Profile Settings](img/img10.png)
 
-### Backup & Restore
-![Backup Restore](img/img11.png)
+### Supplier Management
+![Supplier Management](img/img11.png)
 
 ### Inventory Logs
 ![Inventory Logs](img/img12.png)
 
-### Disposed Items
-![Disposed Items](img/img13.png)
+### Category Managment
+![Category Managment](img/img13.png)
 
 ## Color Palette
 
